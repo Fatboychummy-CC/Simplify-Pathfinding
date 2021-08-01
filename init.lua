@@ -41,8 +41,7 @@ function index:AddAir(x, y, z)
 
 end
 
-function a.New(map)
-  expect(1, map, "table", "nil")
+function a.New()
 end
 
 return a
