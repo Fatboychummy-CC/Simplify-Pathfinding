@@ -18,6 +18,36 @@ else
 end
 
 local a = {}
+local mt = {__index = {}}
+local index = mt.__index
+
+function index:Pathfind(x1, y1, z1, x2, y2, z2)
+
+end
+
+function index:SetMapSize(x, y, z)
+
+end
+
+function index:LoadMap(map)
+
+end
+
+function index:GetMap()
+
+end
+
+function index:AddObstacle(x, y, z)
+
+end
+
+function index:AddUnknown(x, y, z)
+
+end
+
+function index:AddAir(x, y, z)
+
+end
 
 function a.new(map)
   expect(1, map, "table", "nil")
