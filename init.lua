@@ -1,4 +1,6 @@
----
+--- This module can be used to pathfind.
+-- @module A*
+-- @alias a
 
 local ok, expect = pcall(require, "cc.expect")
 if ok then
@@ -13,6 +15,7 @@ local a = {}
 local mt = {__index = {}}
 local index = mt.__index
 
+---
 function index:Pathfind(x1, y1, z1, x2, y2, z2)
 
 end
@@ -36,6 +39,7 @@ end
 function index:AddUnknown(x, y, z)
 
 end
+
 
 function index:AddAir(x, y, z)
 
