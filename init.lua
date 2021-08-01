@@ -7,6 +7,8 @@ else
   error("This module will only work on CC:Tweaked for minecraft 1.12.2+")
 end
 
+local map = require("map")
+
 local a = {}
 local mt = {__index = {}}
 local index = mt.__index
@@ -39,7 +41,7 @@ function index:AddAir(x, y, z)
 
 end
 
-function a.new(map)
+function a.New(map)
   expect(1, map, "table", "nil")
 end
 
