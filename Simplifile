@@ -1,0 +1,18 @@
+{
+  remote = "https://raw.githubusercontent.com/Fatboychummy-CC/SimplifyPathfinding/master/Simplifile",
+  name = "SimplifyPathfinding",
+  files = {
+    {
+      remote = "https://raw.githubusercontent.com/Fatboychummy-CC/SimplifyPathfinding/master/Simplifile",
+      location = "Pathfinder/Simplifile"
+    },
+    {
+      remote = "https://raw.githubusercontent.com/Fatboychummy-CC/SimplifyPathfinding/master/init.lua",
+      location = "Pathfinder/init.lua"
+    },
+    {
+      remote = "https://raw.githubusercontent.com/Fatboychummy-CC/SimplifyPathfinding/master/map.lua",
+      location = "Pathfinder/map.lua"
+    }
+  }
+}
