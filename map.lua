@@ -3,9 +3,20 @@
 -- Precreated map objects should be used from the pathfinder module.
 -- @module map
 
+local expect = require "cc.expect".expect
+
 local map = {}
 local mapmt = {__index = {}}
-local index = mapmt.__index
+local MapObject = mapmt.__index
+
+-- @local
+local function CheckSelf(self)
+  if type(self) ~= "table" or not self._ISMAP then
+    error("Expected ':' when calling method on MapObject.", 3)
+  end
+end
+
+-- @type MapObject
 
 --- This function serializes the table depending on the given mode argument.
 -- Default mode will serialize to pure bytes, for large maps which take up a lot of storage space.
