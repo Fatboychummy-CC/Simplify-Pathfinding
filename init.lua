@@ -2,6 +2,15 @@
 -- @module A*
 -- @alias a
 
+local prefix, pathToSelf = ...
+
+-- Alter the package path so all submodules can require as needed.
+local dir = "/" .. fs.getDir(pathToSelf)
+local addon = string.format(";/%s/?.lua;/%s/?/init.lua", dir, dir)
+if not string.find(package.path, addon, nil, 1) then
+  package.path = package.path .. addon
+end
+
 local ok, expect = pcall(require, "cc.expect")
 if ok then
   expect = expect.expect
