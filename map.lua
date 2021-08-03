@@ -4,6 +4,7 @@
 -- @module map
 
 local expect = require "cc.expect".expect
+local abs = math.abs
 
 local map = {}
 local mapmt = {__index = {}}
@@ -37,11 +38,15 @@ function MapObject:Serialize(mode, callback)
   expect(2, callback, "function", "nil")
   callback = callback or function() end
 
+  if name and #name > 256 then
+    error("Name is too long! (Maximum 256 chars)", 2)
+  end
+
   self.status.percent = 0
   self.status.state = "serialize"
   callback(self.status.state, self.status.percent, self.name)
 
-  local max = self.x * self.y * self.z
+  local max = self.loadedNodes
 
   if mode then
     local output = {}
@@ -50,12 +55,93 @@ function MapObject:Serialize(mode, callback)
       n = n + 1
       output[n] = s .. "\n"
     end
+    -- @todo This
 
+    return {"Not yet implemented"}
   end
 
-  local data = "\179"
+  local data = {"\179"}
+  local n = 1
+  local count = 0
+  local noderuns = {}
+  local runN = 0
 
-  return "Not yet implemented."
+  local function Add(d)
+    n = n + 1
+    data[n] = d
+  end
+
+  Add(string.pack("<i1", #self.name))     -- name length
+  Add(self.name)                          -- name
+  Add(string.pack("<i3", self.offset[1])) -- offset x
+  Add(string.pack("<i3", self.offset[1])) -- offset y
+  Add(string.pack("<i3", self.offset[1])) -- offset z
+
+  for xIndex, YList in pairs(self.map) do
+    for yIndex, ZList in pairs(YList) do
+      self.status.percent = count / max
+      callback(self.status.state, self.status.percent, self.name)
+
+      local runsRemain = true
+      local seen = {}
+      while runsRemain do
+        -- Get the "minimum" node.
+        local minIndex = math.huge
+        for zIndex in pairs(ZList) do
+          if zIndex < minIndex and not seen[zIndex] then
+            minIndex = zIndex
+          end
+        end
+
+        -- If we've claimed all the runs
+        if minIndex == math.huge then
+          runsRemain = false -- stop.
+        else
+          -- Otherwise, calculate when the run ends.
+          local current = minIndex
+          local nodeState = ZList[minIndex].S
+          while ZList[current] and ZList[current].S == nodeState do
+            current = current + 1
+          end
+          current = current - 1
+
+          -- Put the run into the seen list
+          for i = minIndex, current do
+            seen[i] = true
+          end
+          count = count + abs(minIndex - current)
+
+          -- Save the node run, if needed.
+          if ZList[minIndex].S ~= 0 then -- If not unknown node...
+            runN = runN + 1
+            noderuns[runN] = {
+              ZList[minIndex],
+              ZList[current]
+            }
+          end
+        end
+      end
+    end
+  end
+
+  -- Save the number of node runs.
+  Add(string.pack("<i4", runN))
+
+  -- Save each node run.
+  for i = 1, runN do
+    local run = noderuns[i]
+    Add(string.pack("<i1", run[1].x)) -- run x
+    Add(string.pack("<i1", run[1].y)) -- run y
+    Add(string.pack("<i1", run[1].z)) -- run z
+    Add(string.pack("<i1", run[2].z)) -- run end z
+    Add(string.pack("<i1", run[1].S)) -- run state
+  end
+
+  self.status.percent = 1
+  self.status.state = "serialize-complete"
+  callback(self.status.state, self.status.percent, self.name)
+
+  return data
 end
 
 local directions = {
@@ -82,19 +168,31 @@ function MapObject:GetNeighbors(x, y, z)
     _y = _y + y
     _z = _z + z
 
-    local neighborNode = self:Get(x, y, z)
-    neighborNode.neighbors[dirname] = self:Get(_x, _y, _z) -- add neighbor to node
+    node.neighbors[dirname] = self:Get(_x, _y, _z) -- add neighbor to node
   end
+
+  return node.neighbors
 end
 
-local function CreateNode(x, y, z)
-  return {
-    x = x, y = y, z = z, -- Internal position for internal usage
-    H = 0,  -- Distance to end node
-    G = 0,  -- Distance to start node
-    F = 0,  -- Combined values of H + G + P + TP
-    B = false -- Blocked -> Cannot pathfind through this node.
-  }
+local function CreateNode(self, x, y, z, status)
+  if not self.map[x] then
+    self.map[x] = {}
+  end
+  if not self.map[x][y] then
+    self.map[x][y] = {}
+  end
+  if not self.map[x][y][z] then
+    self.map[x][y][z] = {
+      x = x, y = y, z = z, -- Internal position for internal usage
+      H = 0,  -- Distance to end node
+      G = 0,  -- Distance to start node
+      F = 0,  -- Combined values of H + G + P + TP
+      S = status or 0   -- Node state -- 0 = unknown, 1 = blocked, 2 = air
+    }
+    self.loadedNodes = self.loadedNodes + 1
+  end
+
+  return self.map[x][y][z]
 end
 
 --- This function gets a node (and creates it if need be).
@@ -108,134 +206,71 @@ function MapObject:Get(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
-  if not self.map[x] then
-    self.map[x] = {}
-  end
-  if not self.map[x][y] then
-    self.map[x][y] = {}
-  end
-  if not self.map[x][y][z] then
-    self.map[x][y][z] = CreateNode(x, y, z)
-  end
-
-  return self.map[x][y][z]
-end
-
---- This function will connect nodes to neighbors.
-function MapObject:PopulateNodes(callback)
-  CheckSelf(self)
-  expect(1, callback, "function", "nil")
-  callback = callback or function() end
-
-  self.status.percent = 0
-  self.status.state = "populate-nodes"
-  callback(self.status.state, self.status.percent, self.name)
-
-  local max = self.x * self.y * self.z
-
-  for x = 1, self.x do
-    local X = self.map[x]
-    local xl = self.x * (x - 1) * self.y
-    callback(self.status.state, self.status.percent, self.name)
-    for y = 1, self.y do
-      local Y = X[y]
-      local yl = self.y * (y - 1)
-      for z = 1, self.z do
-        local Z = Y[z]
-        self:GetNeighbors(x, y, z)
-        yieldCheck()
-        self.status.percent = (xl + yl + z) / max
-      end
-    end
-  end
-
-  self.status.percent = 1
-  self.status.state = "populate-nodes-complete"
-  callback(self.status.state, self.status.percent, self.name)
-
-  return self
+  return CreateNode(self, x, y, z)
 end
 
 --- This function resizes the map object.
--- This function is not safe when used to resize to a smaller map, data *will* be lost.
--- @note If any input parameters are 0, it will resize the entire object to be 0 size.
--- @tparam number x The x position of the obstacle.
--- @tparam number y The y position of the obstacle.
--- @tparam number z The z position of the obstacle.
-function MapObject:Pregen(x, y, z, callback)
+-- This function will delete all map data when called, be warned!
+-- @tparam number minx The minimum x position.
+-- @tparam number miny The minimum y position.
+-- @tparam number minz The minimum z position.
+-- @tparam number maxx The maximum x position.
+-- @tparam number maxy The maximum y position.
+-- @tparam number maxz The maximum z position.
+-- @tparam number state the state of all nodes to be pregenned. Defaults to "unknown" state.
+-- @tparam function callback The callback to be run while generating.
+function MapObject:Pregen(minx, miny, minz, maxx, maxy, maxz, state, callback)
   CheckSelf(self)
-  expect(1, x, "number")
-  expect(2, y, "number")
-  expect(3, z, "number")
-  expect(4, callback, "function", "nil")
+  expect(1, minx, "number")
+  expect(2, miny, "number")
+  expect(3, minz, "number")
+  expect(4, maxx, "number")
+  expect(5, maxy, "number")
+  expect(6, maxz, "number")
+  expect(7, state, "number", "nil")
+  expect(8, callback, "function", "nil")
   callback = callback or function() end
+  state = state or 0
 
   self.status.state = "resize"
   self.status.percent = 0
   callback(self.status.state, self.status.percent, self.name)
 
+  self.map = {}
   local map = self.map
-  local limx = self.x > x and self.x or x
-  local limy = self.y > y and self.y or y
-  local limz = self.z > z and self.z or z
-  local max = limx * limy * limz
+  local max = maxx * maxy * maxz - minx * miny * minz
+  local count = 0
 
-
-  if limx == 0 or limy == 0 or limz == 0 then
+  if max == 0 then
     self.map = {}
-    self.x = 0
-    self.y = 0
-    self.z = 0
+    self.status.percent = 1
+    self.status.state = "resize-complete"
+    callback(self.status.state, self.status.percent, self.name)
     return self
   end
 
-  for ix = 1, limx do
-    local lx = self.x * (ix - 1) * self.y
-    callback(self.status.state, self.status.percent, self.name)
-    if x < ix then
-      -- Outside of new bounds, delete the entire X row/column/whatever
-      map[ix] = nil
-      yieldCheck()
-    else
-      map[ix] = map[ix] or {}
-      local X = map[ix]
+  for x = minx, maxx do
+    map[x] = {}
+    local X = map[x]
 
-      for iy = 1, limy do
-        local ly = self.y * (iy - 1)
-        if y < iy then
-          -- Outside of new bounds, delete the entire Y row/column/whatever
-          X[iy] = nil
-          yieldCheck()
-        else
-          X[iy] = X[iy] or {}
-          local Y = X[iy]
+    for y = miny, maxy do
+      X[y] = {}
+      local Y = X[y]
+      self.status.percent = count / max
+      callback(self.status.state, self.status.percent, self.name)
 
-          for iz = 1, limz do
-            self.status.percent = (lx + ly + iz) / max
-            yieldCheck()
-            if z < iz then
-              -- Outside of new bounds, delete the node.
-              Y[iz] = nil
-            else
-              -- create new node at ix,iy,iz (or keep the old one)
-              Y[iz] = Y[iz] or CreateNode(ix, iy, iz)
-
-            end
-          end
-        end
+      for z = minz, maxz do
+        count = count + 1
+        CreateNode(self, x, y, z, state)
       end
     end
   end
-
-  self.x = x
-  self.y = y
-  self.z = z
 
   self.status.percent = 1
   self.status.state = "resize-complete"
   callback(self.status.state, self.status.percent, self.name)
 
-  return self:PopulateNodes(callback)
+  return self
 end
 MapObject.REESize = MapObject.Resize
 
@@ -249,6 +284,8 @@ function MapObject:AddObstacle(x, y, z)
   expect(1, x, "number")
   expect(2, y, "number")
   expect(3, z, "number")
+
+  CreateNode(self, x, y, z, 1)
 
   return self
 end
@@ -265,6 +302,8 @@ function MapObject:AddUnknown(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
+  CreateNode(self, x, y, z, 0)
+
   return self
 end
 
@@ -279,10 +318,12 @@ function MapObject:AddAir(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
+  CreateNode(self, x, y, z, 2)
+
   return self
 end
 
-local abs = math.abs
+
 function MapObject:CalculateHCost(node, endNode)
   CheckSelf(self)
   expect(1, node   , "table")
@@ -355,20 +396,28 @@ end
 
 --- Creates a new, blank map.
 -- @treturn mapobject
-function map.New(name)
+function map.New(name, offsetX, offsetY, offsetZ)
   expect(1, name, "string", "nil")
+  if name and #name > 256 then
+    error("Name is too long! (Maximum 256 chars)", 2)
+  end
+  expect(2, offsetX, "number", "nil")
+  expect(3, offsetY, "number", "nil")
+  expect(4, offsetZ, "number", "nil")
+  offsetX = offsetX or 0
+  offsetY = offsetY or 0
+  offsetZ = offsetZ or 0
 
   return setmetatable(
     {
       _ISMAP = true,
       map = {},
-      x = 0,
-      y = 0,
-      z = 0,
+      loadedNodes = 0,
       status = {
         state = "new",
         percent = 0
       },
+      offset = {offsetX, offsetY, offsetZ},
       name = name or "Untitled"
     },
     mapmt
