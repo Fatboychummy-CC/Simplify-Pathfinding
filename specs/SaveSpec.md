@@ -1,9 +1,15 @@
 # Format of File
 ### Overall Format
 ```
-| HEADER | NAME | OFFSETX | OFFSETY | OFFSETZ | NUM NODE RUNS | NODE RUN | ...
+| HEADER | NAME | OFFSETX | OFFSETY | OFFSETZ | NUM NODE RUNS | NODE RUN | ... | FOOTER |
 0        1      ?        ?+3       ?+6       ?+9             ?+13      ?+13+?
 ```
+* Overflow files only contain the following:
+  * HEADER
+  * NUM NODE RUNS
+  * NODE RUNS
+  * FOOTER
+    * Only if the overflow file still is not large enough.
 
 ## Header
 ```
@@ -21,6 +27,11 @@
   * 0: Unknown
   * 1: Blocked
   * 2: Air
+
+## Footer (required for "overflow files")
+```
+| CONTINUATION FILENAME - BSTRING |
+```
 
 # Types
 
