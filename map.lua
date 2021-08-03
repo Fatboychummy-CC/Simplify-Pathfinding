@@ -123,7 +123,7 @@ function MapObject:GetNeighbors(x, y, z)
     _z = _z + z
 
     local neighborNode = self:Get(x, y, z)
-    neighborNode.neighbors[dirname] = map:Get(_x, _y, _z) -- add neighbor to node
+    neighborNode.neighbors[dirname] = self:Get(_x, _y, _z) -- add neighbor to node
   end
 end
 
@@ -150,12 +150,12 @@ function MapObject:Get(x, y, z)
 
   if not self.map[x] then
     self.map[x] = {}
-    if not self.map[x][y] then
-      self.map[x][y] = {}
-      if not self.map[x][y][z] then
-        self.map[x][y][z] = CreateNode(x, y, z)
-      end
-    end
+  end
+  if not self.map[x][y] then
+    self.map[x][y] = {}
+  end
+  if not self.map[x][y][z] then
+    self.map[x][y][z] = CreateNode(x, y, z)
   end
 
   return self.map[x][y][z]
