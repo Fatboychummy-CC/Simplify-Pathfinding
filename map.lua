@@ -138,6 +138,10 @@ local function CreateNode(x, y, z)
 end
 
 --- This function gets a node (and creates it if need be).
+-- @tparam number x The x position of the node.
+-- @tparam number y The y position of the node.
+-- @tparam number z The z position of the node.
+-- @treturn Node
 function MapObject:Get(x, y, z)
   CheckSelf(self)
   expect(1, x, "number")
