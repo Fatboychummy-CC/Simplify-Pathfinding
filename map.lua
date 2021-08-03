@@ -432,13 +432,6 @@ function map.FromFile(filename)
 
 end
 
---- This function clones a map
--- @tparam mapobject the map to be cloned.
--- @treturn mapobject
-function map.Clone(othermap)
-
-end
-
 --- Creates a new, blank map.
 -- @treturn mapobject
 function map.New(name, offsetX, offsetY, offsetZ)
