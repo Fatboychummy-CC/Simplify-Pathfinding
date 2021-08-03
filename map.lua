@@ -106,7 +106,14 @@ local directions = {
   { 0, 0, 1, "z" },
   { 0, 0,-1, "nz"}
 }
-local function GetNeighborinos(map, x, y, z)
+function MapObject:GetNeighbors(x, y, z)
+  CheckSelf(self)
+  expect(1, x, "number")
+  expect(2, y, "number")
+  expect(3, z, "number")
+
+  local map = self.map
+
   map[x][y][z].neighbors = {}
   for i = 1, 6 do
     local _x, _y, _z, dirname = table.unpack(directions[i], 1, 4)
@@ -142,7 +149,7 @@ function MapObject:PopulateNodes(callback)
       local yl = self.y * (y - 1)
       for z = 1, self.z do
         local Z = Y[z]
-        GetNeighborinos(self.map, x, y, z)
+        self:GetNeighbors(x, y, z)
         yieldCheck()
         self.status.percent = (xl + yl + z) / max
       end
@@ -162,7 +169,6 @@ local function CreateNode(x, y, z)
     H = 0,  -- Distance to end node
     G = 0,  -- Distance to start node
     P = 0,  -- Penalty (For use with "unknown" nodes)
-    TP = 0, -- Turn Penalty (when a turn is required)
     F = 0,  -- Combined values of H + G + P + TP
     B = false -- Blocked -> Cannot pathfind through this node.
   }
