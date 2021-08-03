@@ -300,6 +300,25 @@ function MapObject:AddAir(x, y, z)
   return self
 end
 
+local abs = math.abs
+function MapObject:CalculateHCost(node, endNode)
+  CheckSelf(self)
+  expect(1, node   , "table")
+  expect(2, endNode, "table")
+
+  return abs(node.x - endNode.x)
+         + abs(node.y - endNode.y)
+         + abs(node.z - endNode.z)
+end
+
+function MapObject:CalculateGCost(node, startNode)
+  CheckSelf(self)
+  expect(1, node   , "table")
+  expect(2, endNode, "table")
+
+  return CalculateHCost(node, startNode)
+end
+
 --- This function clones the map.
 -- @treturn mapobject
 function MapObject:Clone()
