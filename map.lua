@@ -39,7 +39,7 @@ function MapObject:Serialize(mode, callback)
 
   self.status.percent = 0
   self.status.state = "serialize"
-  callback(self.status.state, self.status.percent)
+  callback(self.status.state, self.status.percent, self.name)
 
   local max = self.x * self.y * self.z
 
@@ -50,10 +50,10 @@ function MapObject:Serialize(mode, callback)
       n = n + 1
       output[n] = s .. "\n"
     end
-    
+
   end
 
-  -- @todo serialize binary.
+  local data = "\179"
 
   return "Not yet implemented."
 end
@@ -129,14 +129,14 @@ function MapObject:PopulateNodes(callback)
 
   self.status.percent = 0
   self.status.state = "populate-nodes"
-  callback(self.status.state, self.status.percent)
+  callback(self.status.state, self.status.percent, self.name)
 
   local max = self.x * self.y * self.z
 
   for x = 1, self.x do
     local X = self.map[x]
     local xl = self.x * (x - 1) * self.y
-    callback(self.status.state, self.status.percent)
+    callback(self.status.state, self.status.percent, self.name)
     for y = 1, self.y do
       local Y = X[y]
       local yl = self.y * (y - 1)
@@ -151,7 +151,7 @@ function MapObject:PopulateNodes(callback)
 
   self.status.percent = 1
   self.status.state = "populate-nodes-complete"
-  callback(self.status.state, self.status.percent)
+  callback(self.status.state, self.status.percent, self.name)
 
   return self
 end
@@ -172,7 +172,7 @@ function MapObject:Pregen(x, y, z, callback)
 
   self.status.state = "resize"
   self.status.percent = 0
-  callback(self.status.state, self.status.percent)
+  callback(self.status.state, self.status.percent, self.name)
 
   local map = self.map
   local limx = self.x > x and self.x or x
@@ -191,7 +191,7 @@ function MapObject:Pregen(x, y, z, callback)
 
   for ix = 1, limx do
     local lx = self.x * (ix - 1) * self.y
-    callback(self.status.state, self.status.percent)
+    callback(self.status.state, self.status.percent, self.name)
     if x < ix then
       -- Outside of new bounds, delete the entire X row/column/whatever
       map[ix] = nil
@@ -233,7 +233,7 @@ function MapObject:Pregen(x, y, z, callback)
 
   self.status.percent = 1
   self.status.state = "resize-complete"
-  callback(self.status.state, self.status.percent)
+  callback(self.status.state, self.status.percent, self.name)
 
   return self:PopulateNodes(callback)
 end
@@ -355,7 +355,9 @@ end
 
 --- Creates a new, blank map.
 -- @treturn mapobject
-function map.New()
+function map.New(name)
+  expect(1, name, "string", "nil")
+
   return setmetatable(
     {
       _ISMAP = true,
@@ -366,7 +368,8 @@ function map.New()
       status = {
         state = "new",
         percent = 0
-      }
+      },
+      name = name or "Untitled"
     },
     mapmt
   )
