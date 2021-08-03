@@ -319,6 +319,37 @@ function MapObject:CalculateGCost(node, startNode)
   return CalculateHCost(node, startNode)
 end
 
+function MapObject:CalculateFCost(node, startNode, endNode)
+  CheckSelf(self)
+  expect(1, node     , "table")
+  expect(1, startNode, "table")
+  expect(1, endNode  , "table")
+
+  local totalCost = 0
+
+  -- Calculate if this node is facing a different direction than the parent node
+  if node.Parent then
+    -- Find ourself in parent's neighbors
+    for dir, _node in pairs(node.Parent.Neighbors) do
+      -- first node's facing will be nil,
+      -- thus incrementing cost of all first moves by 1.
+      -- though this shouldn't have consequences.
+      if _node == node and dir ~= node.Parent.Facing then
+        totalCost = 1
+        node.Facing = dir
+      end
+    end
+  end
+
+
+  totalCost = totalCost + self:CalculateHCost(node, endNode) -- add H cost
+            + self:CalculateGCost(node, startNode) -- add G cost
+            + node.P -- Add penalty for unknown node.
+  --
+
+  return totalCost
+end
+
 --- This function clones the map.
 -- @treturn mapobject
 function MapObject:Clone()
