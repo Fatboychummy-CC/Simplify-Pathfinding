@@ -44,58 +44,18 @@ function MapObject:Serialize(mode, callback)
   local max = self.x * self.y * self.z
 
   if mode then
-    -- @todo Make this much more efficient than it is currently.
-    local strtbl = {n = 1, "{"}
-
+    local output = {}
+    local n = 0
     local function concat(s)
-      strtbl.n = strtbl.n + 1
-      strtbl[strtbl.n] = s
+      n = n + 1
+      output[n] = s .. "\n"
     end
-
-    for x = 1, self.x do
-      local X = self.map[x]
-      local lx = self.x * (x - 1) * self.y
-
-      callback(self.status.state, self.status.percent)
-      concat("[" .. tostring(x) .. "]={")
-      for y = 1, self.y do
-        local Y = X[y]
-        local ly = self.y * (y - 1)
-
-        concat("[" .. tostring(y) .. "]={")
-        for z = 1, self.z do
-          yieldCheck()
-          self.status.percent = (lx + ly + z) / max
-          local node = Y[z]
-          concat("[" .. tostring(z) .. "]={")
-          concat("neighbors={")
-          for dir, neighbor in pairs(node.neighbors) do
-            concat(string.format("%s='%d|%d|%d',", dir, neighbor.x, neighbor.y, neighbor.z))
-          end
-          concat("},")
-          for k, v in pairs(node) do
-            if k == "B" then
-              concat(string.format("b=%s,", v and "true" or "false"))
-            elseif k ~= "neighbors" then
-              concat(string.format("%s=%d,", k, v))
-            end
-          end
-          concat("},")
-        end
-        concat("},")
-      end
-      concat("},")
-    end
-    concat("}")
-
-    self.status.percent = 1
-    self.status.state = "serialize-complete"
-    callback(self.status.state, self.status.percent)
-
-    return strtbl
+    
   end
 
-  return "Not yet implemented." -- @todo this
+  -- @todo serialize binary.
+
+  return "Not yet implemented."
 end
 
 local directions = {
