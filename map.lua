@@ -168,11 +168,6 @@ local function CreateNode(x, y, z)
   }
 end
 
-function MapObject:GetLoadStatus()
-  CheckSelf(self)
-
-end
-
 --- This function resizes the map object.
 -- This function is not safe when used to resize to a smaller map, data *will* be lost.
 -- @note If any input parameters are 0, it will resize the entire object to be 0 size.
