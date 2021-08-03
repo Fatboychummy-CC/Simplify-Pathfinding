@@ -1,14 +1,14 @@
 # Format of File
 ### Overall Format
 ```
-| HEADER | NAME | NUM NODE RUNS | NODE RUN | NODE RUN | NODE RUN | ...
-0        1      ?              ?+4       ?+4+?
+| HEADER | NAME | OFFSETX | OFFSETY | OFFSETZ | NUM NODE RUNS | NODE RUN | ...
+0        1      ?        ?+3       ?+6       ?+9             ?+13      ?+13+?
 ```
 
 ## Header
 ```
-| HEADER - INT LITERAL | MAP NAME - BSTRING | NUM NODES - BNUM2 |
-0                      1                    ?                  ?+4
+| HEADER - INT LITERAL | MAP NAME - BSTRING | OFFSETX | OFFSETY | OFFSETZ | NUM NODES - BNUM2 |
+0                      1                    ?        ?+3       ?+6       ?+9                 ?+13
 ```
 * `HEADER` should always equal `179`
 
