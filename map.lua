@@ -85,6 +85,7 @@ function MapObject:Serialize(mode, callback)
       local runsRemain = true
       local seen = {}
       while runsRemain do
+        yieldCheck()
         -- Get the "minimum" node.
         local minIndex = math.huge
         for zIndex in pairs(ZList) do
@@ -206,6 +207,14 @@ function MapObject:Get(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
+  -- ensure all numbers are in range
+  local ns = {x, y, z}
+  for i = 1, 3 do
+    if not pcall(string.pack, "<i1", ns[i]) then
+      error(string.format("Bad argument #%d: Expected number in signed 1-byte range.", i), 2)
+    end
+  end
+
   return CreateNode(self, x, y, z)
 end
 
@@ -232,13 +241,24 @@ function MapObject:Pregen(minx, miny, minz, maxx, maxy, maxz, state, callback)
   callback = callback or function() end
   state = state or 0
 
+  -- ensure all numbers are in range
+  local ns = {minx, miny, minz, maxx, maxy, maxz}
+  for i = 1, 6 do
+    if not pcall(string.pack, "<i1", ns[i]) then
+      error(string.format("Bad argument #%d: Expected number in signed 1-byte range.", i), 2)
+    end
+  end
+
   self.status.state = "resize"
   self.status.percent = 0
   callback(self.status.state, self.status.percent, self.name)
 
   self.map = {}
   local map = self.map
-  local max = maxx * maxy * maxz - minx * miny * minz
+  local max1 = maxx * maxy * maxz
+  local max2 = minx * miny * minz
+  local max = max2 > 0 or max1 < 0 and max1 - max2
+           or max1 + abs(max2)
   local count = 0
 
   if max == 0 then
@@ -260,6 +280,7 @@ function MapObject:Pregen(minx, miny, minz, maxx, maxy, maxz, state, callback)
       callback(self.status.state, self.status.percent, self.name)
 
       for z = minz, maxz do
+        yieldCheck()
         count = count + 1
         CreateNode(self, x, y, z, state)
       end
@@ -285,6 +306,14 @@ function MapObject:AddObstacle(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
+  -- ensure all numbers are in range
+  local ns = {x, y, z}
+  for i = 1, 3 do
+    if not pcall(string.pack, "<i1", ns[i]) then
+      error(string.format("Bad argument #%d: Expected number in signed 1-byte range.", i), 2)
+    end
+  end
+
   CreateNode(self, x, y, z, 1)
 
   return self
@@ -302,6 +331,14 @@ function MapObject:AddUnknown(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
+  -- ensure all numbers are in range
+  local ns = {x, y, z}
+  for i = 1, 3 do
+    if not pcall(string.pack, "<i1", ns[i]) then
+      error(string.format("Bad argument #%d: Expected number in signed 1-byte range.", i), 2)
+    end
+  end
+
   CreateNode(self, x, y, z, 0)
 
   return self
@@ -317,6 +354,14 @@ function MapObject:AddAir(x, y, z)
   expect(1, x, "number")
   expect(2, y, "number")
   expect(3, z, "number")
+
+  -- ensure all numbers are in range
+  local ns = {x, y, z}
+  for i = 1, 3 do
+    if not pcall(string.pack, "<i1", ns[i]) then
+      error(string.format("Bad argument #%d: Expected number in signed 1-byte range.", i), 2)
+    end
+  end
 
   CreateNode(self, x, y, z, 2)
 
