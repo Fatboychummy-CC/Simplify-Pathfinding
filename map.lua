@@ -179,7 +179,7 @@ end
 -- @tparam number x The x position of the obstacle.
 -- @tparam number y The y position of the obstacle.
 -- @tparam number z The z position of the obstacle.
-function MapObject:Resize(x, y, z, callback)
+function MapObject:Pregen(x, y, z, callback)
   CheckSelf(self)
   expect(1, x, "number")
   expect(2, y, "number")
