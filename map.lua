@@ -426,10 +426,61 @@ function MapObject:Clone()
 end
 
 --- This function loads a map from a file, it determines the mode required while loading.
+-- Does not yet support overflow files.
 -- @tparam string filename The name of the file to be loaded.
 -- @treturn mapobject
 function map.FromFile(filename)
+  expect(1, filename, "string")
 
+  local data = setmetatable({_ISMAP = true, map = {}}, mapmt)
+  local h = io.open(filename, 'rb')
+
+  if not h then
+    error("File failed to open for reading.", 2)
+  end
+
+  local header = string.byte(h:read(1))
+  if header ~= 127 then
+    error("File is not of correct format.", 2)
+  end
+
+  local function readNumber(len)
+    return string.unpack(string.format("<i%d", len), h:read(len))
+  end
+
+  local namelen = readNumber(1)
+  data.name = h:read(namelen)
+
+  data.offsets = {readNumber(3), readNumber(3), readNumber(3)}
+
+  local numNodeRuns = readNumber(4)
+
+  data.loadedNodes = 0
+  for i = 1, #numNodeRuns do
+    local nodeX, nodeY, nodeZ, nodeEnd, nodeState = readNumber(1), readNumber(1), readNumber(1), readNumber(1), readNumber(1)
+
+    local len = nodeZ - nodeEnd
+    data.loadedNodes = data.loadedNodes + len
+
+    if nodeState == 2 then
+      for z = nodeZ, nodeEnd do
+        data:AddAir(nodeX, modeY, z)
+      end
+    else
+      for z = nodeZ, nodeEnd do
+        data:AddObstacle(nodeX, nodeY, z)
+      end
+    end
+  end
+
+  h:close()
+
+  data.status = {
+    state = "new"
+    percent = 0
+  }
+
+  return data
 end
 
 --- Creates a new, blank map.
