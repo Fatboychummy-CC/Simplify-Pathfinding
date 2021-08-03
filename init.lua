@@ -55,6 +55,12 @@ function index:AddAir(x, y, z)
 end
 
 function a.New()
+  return setmetatable(
+    {
+      map = map.New()
+    },
+    mt
+  )
 end
 
 return a
