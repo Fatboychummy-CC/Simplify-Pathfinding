@@ -114,18 +114,47 @@ function MapObject:GetNeighbors(x, y, z)
 
   local map = self.map
 
-  map[x][y][z].neighbors = {}
+  local node = self:Get(x, y, z)
+  node.neighbors = {}
   for i = 1, 6 do
     local _x, _y, _z, dirname = table.unpack(directions[i], 1, 4)
     _x = _x + x
     _y = _y + y
     _z = _z + z
 
-    if _x > 0 and _y > 0 and _z > 0 -- if xyz is non-negative (in bounds)
-    and map[_x] and map[_x][_y] and map[_x][_y][_z] then -- and node exists
-      map[x][y][z].neighbors[dirname] = map[_x][_y][_z] -- add neighbor to node
+    local neighborNode = self:Get(x, y, z)
+    neighborNode.neighbors[dirname] = map:Get(_x, _y, _z) -- add neighbor to node
+  end
+end
+
+local function CreateNode(x, y, z)
+  return {
+    x = x, y = y, z = z, -- Internal position for internal usage
+    H = 0,  -- Distance to end node
+    G = 0,  -- Distance to start node
+    F = 0,  -- Combined values of H + G + P + TP
+    B = false -- Blocked -> Cannot pathfind through this node.
+  }
+end
+
+--- This function gets a node (and creates it if need be).
+function MapObject:Get(x, y, z)
+  CheckSelf(self)
+  expect(1, x, "number")
+  expect(2, y, "number")
+  expect(3, z, "number")
+
+  if not self.map[x] then
+    self.map[x] = {}
+    if not self.map[x][y] then
+      self.map[x][y] = {}
+      if not self.map[x][y][z] then
+        self.map[x][y][z] = CreateNode(x, y, z)
+      end
     end
   end
+
+  return self.map[x][y][z]
 end
 
 --- This function will connect nodes to neighbors.
@@ -161,17 +190,6 @@ function MapObject:PopulateNodes(callback)
   callback(self.status.state, self.status.percent)
 
   return self
-end
-
-local function CreateNode(x, y, z)
-  return {
-    x = x, y = y, z = z, -- Internal position for internal usage
-    H = 0,  -- Distance to end node
-    G = 0,  -- Distance to start node
-    P = 0,  -- Penalty (For use with "unknown" nodes)
-    F = 0,  -- Combined values of H + G + P + TP
-    B = false -- Blocked -> Cannot pathfind through this node.
-  }
 end
 
 --- This function resizes the map object.
