@@ -428,52 +428,67 @@ end
 --- This function loads a map from a file, it determines the mode required while loading.
 -- Does not yet support overflow files.
 -- @tparam string filename The name of the file to be loaded.
+-- @tparam function callback The callback to be called during stages of loading.
 -- @treturn mapobject
-function map.FromFile(filename)
+function map.FromFile(filename, callback)
   expect(1, filename, "string")
+  expect(2, callback, "function", "nil")
 
   local data = setmetatable({_ISMAP = true, map = {}}, mapmt)
   local h = io.open(filename, 'rb')
 
-  if not h then
-    error("File failed to open for reading.", 2)
-  end
+  local ok, err = pcall(function()
+    callback("loading", 0, filename)
 
-  local header = string.byte(h:read(1))
-  if header ~= 127 then
-    error("File is not of correct format.", 2)
-  end
+    if not h then
+      error("File failed to open for reading.", 2)
+    end
 
-  local function readNumber(len)
-    return string.unpack(string.format("<i%d", len), h:read(len))
-  end
+    local header = string.byte(h:read(1))
+    if header ~= 127 then
+      error("File is not of correct format.", 2)
+    end
 
-  local namelen = readNumber(1)
-  data.name = h:read(namelen)
+    local function readNumber(len)
+      return string.unpack(string.format("<i%d", len), h:read(len))
+    end
 
-  data.offsets = {readNumber(3), readNumber(3), readNumber(3)}
+    local namelen = readNumber(1)
+    data.name = h:read(namelen)
 
-  local numNodeRuns = readNumber(4)
+    data.offsets = {readNumber(3), readNumber(3), readNumber(3)}
 
-  data.loadedNodes = 0
-  for i = 1, #numNodeRuns do
-    local nodeX, nodeY, nodeZ, nodeEnd, nodeState = readNumber(1), readNumber(1), readNumber(1), readNumber(1), readNumber(1)
+    local numNodeRuns = readNumber(4)
 
-    local len = nodeZ - nodeEnd
-    data.loadedNodes = data.loadedNodes + len
+    data.loadedNodes = 0
+    for i = 1, numNodeRuns do
+      local nodeX, nodeY, nodeZ, nodeEnd, nodeState = readNumber(1), readNumber(1), readNumber(1), readNumber(1), readNumber(1)
 
-    if nodeState == 2 then
-      for z = nodeZ, nodeEnd do
-        data:AddAir(nodeX, modeY, z)
+      yieldCheck()
+      if i % 10 == 0 then
+        callback("loading", i / numNodeRuns, filename)
       end
-    else
-      for z = nodeZ, nodeEnd do
-        data:AddObstacle(nodeX, nodeY, z)
+
+      local len = nodeZ - nodeEnd
+      data.loadedNodes = data.loadedNodes + len
+
+      if nodeState == 2 then
+        for z = nodeZ, nodeEnd do
+          data:AddAir(nodeX, modeY, z)
+        end
+      else
+        for z = nodeZ, nodeEnd do
+          data:AddObstacle(nodeX, nodeY, z)
+        end
       end
     end
-  end
+  end)
 
-  h:close()
+  pcall(h.close, h)
+
+  if not ok then
+    error("Failed to read file:\n" .. err, 2)
+  end
 
   data.status = {
     state = "new"
