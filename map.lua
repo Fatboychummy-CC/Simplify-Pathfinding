@@ -8,6 +8,14 @@ local expect = require "cc.expect".expect
 local map = {}
 local mapmt = {__index = {}}
 local MapObject = mapmt.__index
+local endTime = os.epoch("utc") + 3000
+local function yieldCheck()
+  if endTime < os.epoch("utc") then
+    endTime = os.epoch("utc") + 3000
+    os.queueEvent("pathfinder_dummy_event")
+    os.pullEvent("pathfinder_dummy_event")
+  end
+end
 
 -- @local
 local function CheckSelf(self)
@@ -23,48 +31,68 @@ end
 -- Passing true as the mode argument will serialize using what is essentially a modified textutils.serialize, for human readability.
 -- @tparam boolean? mode The mode to be used.
 -- @treturn string
-function MapObject:Serialize(mode)
+function MapObject:Serialize(mode, callback)
   CheckSelf(self)
   expect(1, mode, "boolean", "nil")
+  expect(2, callback, "function", "nil")
+  callback = callback or function() end
+
+  self.status.percent = 0
+  self.status.state = "serialize"
+  callback(self.status.state, self.status.percent)
+
+  local max = self.x * self.y * self.z
 
   if mode then
     -- @todo Make this much more efficient than it is currently.
-    local str = "{\n"
+    local strtbl = {n = 1, "{"}
 
     local function concat(s)
-      str = str .. s .. "\n"
+      strtbl.n = strtbl.n + 1
+      strtbl[strtbl.n] = s
     end
 
     for x = 1, self.x do
       local X = self.map[x]
-      concat("  [" .. tostring(x) .. "] = {")
+      local lx = self.x * (x - 1) * self.y
+
+      callback(self.status.state, self.status.percent)
+      concat("[" .. tostring(x) .. "]={")
       for y = 1, self.y do
         local Y = X[y]
-        concat("    [" .. tostring(y) .. "] = {")
+        local ly = self.y * (y - 1)
+
+        concat("[" .. tostring(y) .. "]={")
         for z = 1, self.z do
+          yieldCheck()
+          self.status.percent = (lx + ly + z) / max
           local node = Y[z]
-          concat("      [" .. tostring(z) .. "] = {")
-          concat("        neighbors = {")
+          concat("[" .. tostring(z) .. "]={")
+          concat("neighbors={")
           for dir, neighbor in pairs(node.neighbors) do
-            concat(string.format("          %s = '%d|%d|%d',", dir, neighbor.x, neighbor.y, neighbor.z))
+            concat(string.format("%s='%d|%d|%d',", dir, neighbor.x, neighbor.y, neighbor.z))
           end
-          concat("        },")
+          concat("},")
           for k, v in pairs(node) do
             if k == "B" then
-              concat(string.format("        b = %s,", v and "true" or "false"))
+              concat(string.format("b=%s,", v and "true" or "false"))
             elseif k ~= "neighbors" then
-              concat(string.format("        %s = %d,", k, v))
+              concat(string.format("%s=%d,", k, v))
             end
           end
-          concat("      },")
+          concat("},")
         end
-        concat("    },")
+        concat("},")
       end
-      concat("  },")
+      concat("},")
     end
     concat("}")
 
-    return str
+    self.status.percent = 1
+    self.status.state = "serialize-complete"
+    callback(self.status.state, self.status.percent)
+
+    return strtbl
   end
 
   return "Not yet implemented." -- @todo this
@@ -94,19 +122,36 @@ local function GetNeighborinos(map, x, y, z)
 end
 
 --- This function will connect nodes to neighbors.
-function MapObject:PopulateNodes()
+function MapObject:PopulateNodes(callback)
   CheckSelf(self)
+  expect(1, callback, "function", "nil")
+  callback = callback or function() end
+
+  self.status.percent = 0
+  self.status.state = "populate-nodes"
+  callback(self.status.state, self.status.percent)
+
+  local max = self.x * self.y * self.z
 
   for x = 1, self.x do
     local X = self.map[x]
+    local xl = self.x * (x - 1) * self.y
+    callback(self.status.state, self.status.percent)
     for y = 1, self.y do
       local Y = X[y]
+      local yl = self.y * (y - 1)
       for z = 1, self.z do
         local Z = Y[z]
         GetNeighborinos(self.map, x, y, z)
+        yieldCheck()
+        self.status.percent = (xl + yl + z) / max
       end
     end
   end
+
+  self.status.percent = 1
+  self.status.state = "populate-nodes-complete"
+  callback(self.status.state, self.status.percent)
 
   return self
 end
@@ -123,42 +168,75 @@ local function CreateNode(x, y, z)
   }
 end
 
+function MapObject:GetLoadStatus()
+  CheckSelf(self)
+
+end
+
 --- This function resizes the map object.
 -- This function is not safe when used to resize to a smaller map, data *will* be lost.
+-- @note If any input parameters are 0, it will resize the entire object to be 0 size.
 -- @tparam number x The x position of the obstacle.
 -- @tparam number y The y position of the obstacle.
 -- @tparam number z The z position of the obstacle.
-function MapObject:Resize(x, y, z)
+function MapObject:Resize(x, y, z, callback)
   CheckSelf(self)
   expect(1, x, "number")
   expect(2, y, "number")
   expect(3, z, "number")
+  expect(4, callback, "function", "nil")
+  callback = callback or function() end
+
+  self.status.state = "resize"
+  self.status.percent = 0
+  callback(self.status.state, self.status.percent)
 
   local map = self.map
+  local limx = self.x > x and self.x or x
+  local limy = self.y > y and self.y or y
+  local limz = self.z > z and self.z or z
+  local max = limx * limy * limz
 
-  for ix = 1, map.x do
+
+  if limx == 0 or limy == 0 or limz == 0 then
+    self.map = {}
+    self.x = 0
+    self.y = 0
+    self.z = 0
+    return self
+  end
+
+  for ix = 1, limx do
+    local lx = self.x * (ix - 1) * self.y
+    callback(self.status.state, self.status.percent)
     if x < ix then
       -- Outside of new bounds, delete the entire X row/column/whatever
       map[ix] = nil
+      yieldCheck()
     else
       map[ix] = map[ix] or {}
       local X = map[ix]
 
-      for iy = 1, map.y do
+      for iy = 1, limy do
+        local ly = self.y * (iy - 1)
         if y < iy then
           -- Outside of new bounds, delete the entire Y row/column/whatever
           X[iy] = nil
+          yieldCheck()
         else
           X[iy] = X[iy] or {}
           local Y = X[iy]
 
-          for iz = 1, map.z do
+          for iz = 1, limz do
+            self.status.percent = (lx + ly + iz) / max
+            yieldCheck()
             if z < iz then
               -- Outside of new bounds, delete the node.
               Y[iz] = nil
             else
               -- create new node at ix,iy,iz (or keep the old one)
-              Y[iz] = Y[iz] or CreateNode()
+              Y[iz] = Y[iz] or CreateNode(ix, iy, iz)
+
             end
           end
         end
@@ -170,7 +248,11 @@ function MapObject:Resize(x, y, z)
   self.y = y
   self.z = z
 
-  return self:PopulateNodes()
+  self.status.percent = 1
+  self.status.state = "resize-complete"
+  callback(self.status.state, self.status.percent)
+
+  return self:PopulateNodes(callback)
 end
 MapObject.REESize = MapObject.Resize
 
@@ -247,7 +329,11 @@ function map.New()
       map = {},
       x = 0,
       y = 0,
-      z = 0
+      z = 0,
+      status = {
+        state = "new",
+        percent = 0
+      }
     },
     mapmt
   )
