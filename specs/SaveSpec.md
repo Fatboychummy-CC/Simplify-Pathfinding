@@ -15,7 +15,7 @@
 ## Node Run Structure
 ```
 | NODEX - BNUM | NODEY - BNUM | NODEZ - BNUM | NODEZ-END | NODESTATE - BYTE |
-0              1              2              3           4                  10
+0              1              2              3           4                  5
 ```
 * Nodestates are as follows:
   * 0: Unknown
