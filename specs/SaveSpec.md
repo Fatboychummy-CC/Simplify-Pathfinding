@@ -1,8 +1,8 @@
 # Format of File
 ### Overall Format
 ```
-| HEADER | NAME | NUM NODES |  |||  | NODEX | NODEY | NODEZ | NODESTATE | ...
-0        1      ?          ?+3     ?+6     ?+9     ?+12    ?+15        ?+16
+| HEADER | NAME | NUM NODES | NODEX | NODEY | NODEZ | NODESTATE | ...
+0        1      ?          ?+3     ?+6     ?+9     ?+12        ?+13
 ```
 
 ## Header
@@ -14,8 +14,8 @@
 
 ## Node Structure
 ```
-| NODEX - BNUM | NODEY - BNUM | NODEZ - BNUM | NODESTATE - 1B |
-0              3              6              9                10
+| NODEX - BNUM | NODEY - BNUM | NODEZ - BNUM | NODESTATE - BYTE |
+0              3              6              9                  10
 ```
 * Nodestates are as follows:
   * 0: Unknown
