@@ -146,12 +146,12 @@ function MapObject:Serialize(mode, callback)
 end
 
 local directions = {
-  { 1, 0, 0, "x" },
-  {-1, 0, 0, "nx"},
-  { 0, 1, 0, "y" },
-  { 0,-1, 0, "ny"},
-  { 0, 0, 1, "z" },
-  { 0, 0,-1, "nz"}
+  { 1, 0, 0, 3 }, -- positive X
+  {-1, 0, 0, 1 }, -- negative X
+  { 0, 1, 0, 5 }, -- up
+  { 0,-1, 0, 4 }, -- down
+  { 0, 0, 1, 0 }, -- positive Z
+  { 0, 0,-1, 2 }  -- negative Z
 }
 function MapObject:GetNeighbors(x, y, z)
   CheckSelf(self)
@@ -190,7 +190,7 @@ local function CreateNode(self, x, y, z, status)
       x = x, y = y, z = z, -- Internal position for internal usage
       H = 0,  -- Distance to end node
       G = 0,  -- Distance to start node
-      F = 0,  -- Combined values of H + G + P + TP
+      F = math.huge,  -- Combined values of H + G + P + TP
       P = 0,
       S = status or 0   -- Node state -- 0 = unknown, 1 = blocked, 2 = air
     }
