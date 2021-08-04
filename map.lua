@@ -159,6 +159,9 @@ function MapObject:GetNeighbors(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
+  -- Offsets do not need to be calculated here
+  -- using self:Get does that implicitly.
+
   local map = self.map
 
   local node = self:Get(x, y, z)
@@ -206,6 +209,15 @@ function MapObject:Get(x, y, z)
   expect(1, x, "number")
   expect(2, y, "number")
   expect(3, z, "number")
+
+  -- Ensure offsets are worked with.
+  if x > 127 or x < -128
+    or y > 127 or x < -128
+    or z > 127 or x < -128 then
+    x = x - self.offset[1]
+    y = y - self.offset[2]
+    z = z - self.offset[3]
+  end
 
   -- ensure all numbers are in range
   local ns = {x, y, z}
@@ -306,6 +318,15 @@ function MapObject:AddObstacle(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
+  -- Ensure offsets are worked with.
+  if x > 127 or x < -128
+    or y > 127 or x < -128
+    or z > 127 or x < -128 then
+    x = x - self.offset[1]
+    y = y - self.offset[2]
+    z = z - self.offset[3]
+  end
+
   -- ensure all numbers are in range
   local ns = {x, y, z}
   for i = 1, 3 do
@@ -331,6 +352,15 @@ function MapObject:AddUnknown(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
+  -- Ensure offsets are worked with.
+  if x > 127 or x < -128
+    or y > 127 or x < -128
+    or z > 127 or x < -128 then
+    x = x - self.offset[1]
+    y = y - self.offset[2]
+    z = z - self.offset[3]
+  end
+
   -- ensure all numbers are in range
   local ns = {x, y, z}
   for i = 1, 3 do
@@ -354,6 +384,15 @@ function MapObject:AddAir(x, y, z)
   expect(1, x, "number")
   expect(2, y, "number")
   expect(3, z, "number")
+
+  -- Ensure offsets are worked with.
+  if x > 127 or x < -128
+    or y > 127 or x < -128
+    or z > 127 or x < -128 then
+    x = x - self.offset[1]
+    y = y - self.offset[2]
+    z = z - self.offset[3]
+  end
 
   -- ensure all numbers are in range
   local ns = {x, y, z}
