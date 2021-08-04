@@ -54,7 +54,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget)
   expect(8, budget, "number", "nil")
   budget = budget or 10000
 
-  local map = self.map
+  local map = self.Map
   local beginNode = map:Get(x1, y1, z1)
   local endNode = map:Get(x2, y2, z2)
   local fakeParentNode = {Facing = startFacing}
@@ -191,7 +191,7 @@ function index:LoadMap(filename, callback)
     error("That file does not exist.", 2)
   end
 
-  self.map = map.FromFile(filename, callback)
+  self.Map = map.FromFile(filename, callback)
 
   return self
 end
@@ -199,7 +199,7 @@ end
 function index:GetMap()
   CheckSelf(self)
 
-  return self.map
+  return self.Map
 end
 
 
@@ -216,7 +216,7 @@ function index:AddObstacle(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
-  self.map:AddObstacle(x, y, z)
+  self.Map:AddObstacle(x, y, z)
 
   return self
 end
@@ -233,7 +233,7 @@ function index:AddUnknown(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
-  self.map:AddUnknown(x, y, z)
+  self.Map:AddUnknown(x, y, z)
 
   return self
 end
@@ -250,7 +250,7 @@ function index:AddAir(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
-  self.map:AddAir(x, y, z)
+  self.Map:AddAir(x, y, z)
 
   return self
 end
@@ -263,9 +263,9 @@ function index:SetMapOffset(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
-  self.map.offset[1] = x
-  self.map.offset[2] = y
-  self.map.offset[3] = z
+  self.Map.offset[1] = x
+  self.Map.offset[2] = y
+  self.Map.offset[3] = z
 
   return self
 end
@@ -300,7 +300,7 @@ function index:ScanIntoMapUsing(object, range, offsetx, offsety, offsetz, callba
 
       -- For each block in the scan range, add it as an obstacle.
       for i, block in ipairs(scan) do
-        self.map:Get(block.x + offsetx, block.y + offsety, block.z + offsetz).S = 1
+        self.Map:Get(block.x + offsetx, block.y + offsety, block.z + offsetz).S = 1
         obsLoc[string.format("%d|%d|%d", block.x, block.y, block.z)] = true
       end
 
@@ -309,7 +309,7 @@ function index:ScanIntoMapUsing(object, range, offsetx, offsety, offsetz, callba
         for y = -range, range do
           for z = -range, range do
             if not obsLoc[string.format("%d|%d|%d", x, y, z)] then
-              self.map:Get(x + offsetx, y + offsety, z + offsetz).S = 2
+              self.Map:Get(x + offsetx, y + offsety, z + offsetz).S = 2
             end
           end
         end
@@ -328,10 +328,10 @@ function index:ScanIntoMapUsing(object, range, offsetx, offsety, offsetz, callba
   return self
 end
 
-function a.New()
+function a.New(name, offsetx, offsety, offsetz)
   return setmetatable(
     {
-      map = map.New(),
+      Map = map.New(name, offsetx, offsety, offsetz),
       _ISPATHFINDER = true
     },
     mt
