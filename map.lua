@@ -391,8 +391,36 @@ function MapObject:CalculateHCost(node, endNode)
   expect(1, node   , "table")
   expect(2, endNode, "table")
 
-  return abs(node.x - endNode.x)
-         + abs(node.y - endNode.y)
+  -- Determine amount of movements required to get to the end node.
+  local cost = abs(node.y - endNode.y) -- start with Y movements, no turn cost.
+  if node.Facing then
+    local f = node.Facing
+    -- we need to face the direction we're closest to the "edge" of
+    -- or preferrably, if we're aligned properly already, go straight to
+    -- one of the edges even if it's farther than the closer
+    if (f == 0 and node.z <= endNode.z) or (f == 2 and node.z >= endNode.z) then -- positive/negative Z facing
+      -- all good on Z part, don't need a turn.
+
+      -- but lets check X axis
+      if node.x ~= endNode.x then
+        cost = cost + 1 -- node off on X axis, at least one turn needed.
+      end
+    elseif (f == 1 and node.x >= endNode.x) or (f == 3 and node.x <= endNode.x) then -- negative X facing
+      -- All good on X part, don't need a turn.
+
+      -- but lets check Z axis
+      if node.z ~= endNode.z then
+        cost = cost + 1
+      end
+    else
+      -- Not aligned properly to any axis, and not on any of the direct axis,
+      -- two turns required.
+      cost = cost + 2
+    end
+  end
+
+  -- add the amount of moves needed on x / z axis.
+  return cost + abs(node.x - endNode.x)
          + abs(node.z - endNode.z)
 end
 
@@ -421,7 +449,16 @@ function MapObject:CalculateFGHCost(node, startNode, endNode)
       -- though this shouldn't have consequences.
       if _node == node and dir ~= node.Parent.Facing then
         FCost = 1
-        node.Facing = dir
+        if dir > 3 then
+          node.Facing = node.Parent.Facing
+        else
+          node.Facing = dir
+        end
+        break
+      elseif _node == node then
+        FCost = 0
+        node.Facing = node.Parent.Facing
+        break
       end
     end
   end
