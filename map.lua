@@ -197,13 +197,12 @@ local function CreateNode(self, x, y, z, status)
   end
   if not self.Map[lx][ly][lz] then
     self.Map[lx][ly][lz] = {
-      set = false,
       x = x,
       y = y,
       z = z,  -- Internal position for internal usage
       H = 0,  -- Distance to end node
       G = 0,  -- Distance to start node
-      F = 0,  -- Combined values of H + G + P + TP
+      F = math.huge,  -- Combined values of H + G + P + TP
       P = 0,
       P2 = 0, -- Used internally to avoid pathfinding along edges.
       S = status or 0   -- Node state -- 0 = unknown, 1 = blocked, 2 = air
