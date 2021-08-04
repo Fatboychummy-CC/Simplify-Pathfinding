@@ -552,7 +552,7 @@ function map.New(name, offsetX, offsetY, offsetZ)
   return setmetatable(
     {
       _ISMAP = true,
-      map = {},
+      Map = {},
       loadedNodes = 0,
       status = {
         state = "new",
