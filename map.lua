@@ -131,10 +131,10 @@ function MapObject:Serialize(mode, callback)
   -- Save each node run.
   for i = 1, runN do
     local run = noderuns[i]
-    Add(string.pack("<i1", run[1].x)) -- run x
-    Add(string.pack("<i1", run[1].y)) -- run y
-    Add(string.pack("<i1", run[1].z)) -- run z
-    Add(string.pack("<i1", run[2].z)) -- run end z
+    Add(string.pack("<i1", run[1].x - self.offset[1])) -- run x
+    Add(string.pack("<i1", run[1].y - self.offset[2])) -- run y
+    Add(string.pack("<i1", run[1].z - self.offset[3])) -- run z
+    Add(string.pack("<i1", run[2].z - self.offset[3])) -- run end z
     Add(string.pack("<i1", run[1].S)) -- run state
   end
 
@@ -179,25 +179,45 @@ function MapObject:GetNeighbors(x, y, z)
 end
 
 local function CreateNode(self, x, y, z, status)
-  if not self.Map[x] then
-    self.Map[x] = {}
+  local lx = x - self.offset[1]
+  local ly = y - self.offset[2]
+  local lz = z - self.offset[3]
+
+  if x > 127 or x < -128
+    or y > 127 or y < -128
+    or z > 127 or z < -128 then
+    error("Bad arguments: Number not within signed 1-byte range.", 3)
   end
-  if not self.Map[x][y] then
-    self.Map[x][y] = {}
+
+  if not self.Map[lx] then
+    self.Map[lx] = {}
   end
-  if not self.Map[x][y][z] then
-    self.Map[x][y][z] = {
-      x = x, y = y, z = z, -- Internal position for internal usage
+  if not self.Map[lx][ly] then
+    self.Map[lx][ly] = {}
+  end
+  if not self.Map[lx][ly][lz] then
+    self.Map[lx][ly][lz] = {
+      x = x,
+      y = y,
+      z = z,  -- Internal position for internal usage
       H = 0,  -- Distance to end node
       G = 0,  -- Distance to start node
       F = math.huge,  -- Combined values of H + G + P + TP
       P = 0,
+      P2 = 0, -- Used internally to avoid pathfinding along edges.
       S = status or 0   -- Node state -- 0 = unknown, 1 = blocked, 2 = air
     }
+
+    -- Edges of range will reject pathfinding.
+    if lx == 127 or lx == -128
+      or ly == 127 or ly == -128
+      or lz == 127 or lz == -128 then
+      self.Map[lx][ly][lz].P2 = math.huge
+    end
     self.loadedNodes = self.loadedNodes + 1
   end
 
-  return self.Map[x][y][z]
+  return self.Map[lx][ly][lz]
 end
 
 --- This function gets a node (and creates it if need be).
@@ -210,23 +230,6 @@ function MapObject:Get(x, y, z)
   expect(1, x, "number")
   expect(2, y, "number")
   expect(3, z, "number")
-
-  -- Ensure offsets are worked with.
-  if x > 127 or x < -128
-    or y > 127 or x < -128
-    or z > 127 or x < -128 then
-    x = x - self.offset[1]
-    y = y - self.offset[2]
-    z = z - self.offset[3]
-  end
-
-  -- ensure all numbers are in range
-  local ns = {x, y, z}
-  for i = 1, 3 do
-    if not pcall(string.pack, "<i1", ns[i]) then
-      error(string.format("Bad argument #%d: Expected number in signed 1-byte range.", i), 2)
-    end
-  end
 
   return CreateNode(self, x, y, z)
 end
@@ -319,15 +322,6 @@ function MapObject:AddObstacle(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
-  -- Ensure offsets are worked with.
-  if x > 127 or x < -128
-    or y > 127 or x < -128
-    or z > 127 or x < -128 then
-    x = x - self.offset[1]
-    y = y - self.offset[2]
-    z = z - self.offset[3]
-  end
-
   -- ensure all numbers are in range
   local ns = {x, y, z}
   for i = 1, 3 do
@@ -353,15 +347,6 @@ function MapObject:AddUnknown(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
-  -- Ensure offsets are worked with.
-  if x > 127 or x < -128
-    or y > 127 or x < -128
-    or z > 127 or x < -128 then
-    x = x - self.offset[1]
-    y = y - self.offset[2]
-    z = z - self.offset[3]
-  end
-
   -- ensure all numbers are in range
   local ns = {x, y, z}
   for i = 1, 3 do
@@ -386,15 +371,6 @@ function MapObject:AddAir(x, y, z)
   expect(1, x, "number")
   expect(2, y, "number")
   expect(3, z, "number")
-
-  -- Ensure offsets are worked with.
-  if x > 127 or x < -128
-    or y > 127 or x < -128
-    or z > 127 or x < -128 then
-    x = x - self.offset[1]
-    y = y - self.offset[2]
-    z = z - self.offset[3]
-  end
 
   -- ensure all numbers are in range
   local ns = {x, y, z}
@@ -455,6 +431,7 @@ function MapObject:CalculateFGHCost(node, startNode, endNode)
   FCost = FCost + HCost -- add H cost
         + GCost -- add G cost
         + node.P -- Add penalty for unknown node.
+        + node.P2 -- Add penalty for being on the edge of the map.
   --
 
   return FCost, GCost, HCost
