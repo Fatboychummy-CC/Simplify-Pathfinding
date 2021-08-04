@@ -59,17 +59,57 @@ function index:GetMap()
   return self.map
 end
 
+
+--- The below three functions are all passthroughs to MapObject:Add___
+-- @see MapObject:AddObstacle
+-- @tparam number x The x position to put the node.
+-- @tparam number y The y position to put the node.
+-- @tparam number z The z position to put the node.
+-- @see Pathfinder:AddUnknown
+-- @see Pathfinder:AddAir
 function index:AddObstacle(x, y, z)
+  CheckSelf(self)
+  expect(1, x, "number")
+  expect(2, y, "number")
+  expect(3, z, "number")
 
+  self.map:AddObstacle(x, y, z)
+
+  return self
 end
 
+--- Passthrough
+-- @see MapObject:AddUnknown
+-- @tparam number x The x position to put the node.
+-- @tparam number y The y position to put the node.
+-- @tparam number z The z position to put the node.
+-- @see Pathfinder:AddObstacle
 function index:AddUnknown(x, y, z)
+  CheckSelf(self)
+  expect(1, x, "number")
+  expect(2, y, "number")
+  expect(3, z, "number")
 
+  self.map:AddUnknown(x, y, z)
+
+  return self
 end
 
-
+--- Passthrough
+-- @see MapObject:AddAir
+-- @tparam number x The x position to put the node.
+-- @tparam number y The y position to put the node.
+-- @tparam number z The z position to put the node.
+-- @see Pathfinder:AddObstacle
 function index:AddAir(x, y, z)
+  CheckSelf(self)
+  expect(1, x, "number")
+  expect(2, y, "number")
+  expect(3, z, "number")
 
+  self.map:AddAir(x, y, z)
+
+  return self
 end
 
 function a.New()
