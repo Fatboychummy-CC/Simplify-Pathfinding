@@ -110,6 +110,21 @@ function index:AddAir(x, y, z)
   return self
 end
 
+--- Sets the map's internal offset.
+-- When getting node information, this offset is subtracted from the input.
+function index:SetMapOffset(x, y, z)
+  CheckSelf(self)
+  expect(1, x, "number")
+  expect(2, y, "number")
+  expect(3, z, "number")
+
+  self.map.offset[1] = x
+  self.map.offset[2] = y
+  self.map.offset[3] = z
+
+  return self
+end
+
 function a.New()
   return setmetatable(
     {
