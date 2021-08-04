@@ -445,7 +445,7 @@ function map.FromFile(filename, callback)
     end
 
     local header = string.byte(h:read(1))
-    if header ~= 127 then
+    if header ~= 179 then
       error("File is not of correct format.", 2)
     end
 
@@ -456,7 +456,7 @@ function map.FromFile(filename, callback)
     local namelen = readNumber(1)
     data.name = h:read(namelen)
 
-    data.offsets = {readNumber(3), readNumber(3), readNumber(3)}
+    data.offset = {readNumber(3), readNumber(3), readNumber(3)}
 
     local numNodeRuns = readNumber(4)
 
@@ -486,12 +486,14 @@ function map.FromFile(filename, callback)
 
   pcall(h.close, h)
 
+  callback("loading-complete", 1, filename)
+
   if not ok then
     error("Failed to read file:\n" .. err, 2)
   end
 
   data.status = {
-    state = "new"
+    state = "new",
     percent = 0
   }
 
