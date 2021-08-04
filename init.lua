@@ -24,6 +24,11 @@ local a = {}
 local mt = {__index = {}}
 local index = mt.__index
 
+local function CheckSelf(self)
+  if type(self) ~= "table" or not self._ISPATHFINDER then
+    error("Expected ':' when calling method on PathfinderObject.", 3)
+  end
+end
 ---
 function index:Pathfind(x1, y1, z1, x2, y2, z2)
 
@@ -33,12 +38,25 @@ function index:SetMapSize(x, y, z)
 
 end
 
-function index:LoadMap(map)
+--- Loads a map from a file.
+-- @tparam string filename the absolute path to the file.
+-- @tparam function? callback The callback to be used for loading.
+function index:LoadMap(filename, callback)
+  CheckSelf(self)
+  expect(1, filename, "string")
+  expect(2, callback, "function", "nil")
 
+  if not fs.exists(filename) then
+    error("That file does not exist.", 2)
+  end
+
+  self.map = map.FromFile(filename, callback)
+
+  return self
 end
 
 function index:GetMap()
-
+  return self.map
 end
 
 function index:AddObstacle(x, y, z)
@@ -57,7 +75,8 @@ end
 function a.New()
   return setmetatable(
     {
-      map = map.New()
+      map = map.New(),
+      _ISPATHFINDER = true
     },
     mt
   )
