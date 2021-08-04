@@ -398,10 +398,10 @@ end
 
 function MapObject:CalculateGCost(node, startNode)
   CheckSelf(self)
-  expect(1, node   , "table")
-  expect(2, endNode, "table")
+  expect(1, node     , "table")
+  expect(2, startNode, "table")
 
-  return CalculateHCost(node, startNode)
+  return self:CalculateHCost(node, startNode)
 end
 
 function MapObject:CalculateFGHCost(node, startNode, endNode)
