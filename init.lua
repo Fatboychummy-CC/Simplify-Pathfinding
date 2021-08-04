@@ -30,6 +30,32 @@ local function CheckSelf(self)
   end
 end
 
+local placed = {n = 0}
+local function PutBlock(enable, x, y, z, name, clearing)
+  if enable then
+    commands.exec(
+      string.format(
+        "setblock %d %d %d %s",
+        x, y, z,
+        name
+      )
+    )
+    if not clearing then
+      placed.n = placed.n + 1
+      placed[placed.n] = {x,y,z}
+    end
+  end
+end
+
+local function CleanPlacements(enable)
+  if enable then
+    for i = 1, placed.n do
+      PutBlock(true, placed[i][1], placed[i][2], placed[i][3], "minecraft:air", true)
+    end
+    placed = {n = 0}
+  end
+end
+
 --- Pathfind from a given point, to a given point.
 -- Facings are: 0 = +z, 1 = -x, 2 = -z, 3 = +x
 -- @tparam number x1 The first point position.
@@ -40,9 +66,10 @@ end
 -- @tparam number z2 The second point position.
 -- @tparam number startFacing The facing the turtle begins as.
 -- @tparam number budget The loop budget to run with. If budget iterations have run, pathfinding will abort. Defaults to 10000.
+-- @tparam boolean debug If enabled, assumes this is a command computer and places blocks along search path.
 -- @treturn boolean If a valid path was found.
 -- @treturn table? The path that was found.
-function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget)
+function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
   CheckSelf(self)
   expect(1, x1, "number")
   expect(2, y1, "number")
@@ -50,7 +77,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget)
   expect(4, x2, "number")
   expect(5, y2, "number")
   expect(6, z2, "number")
-  expect(7, startFacing, "string")
+  expect(7, startFacing, "number")
   expect(8, budget, "number", "nil")
   budget = budget or 10000
 
@@ -74,6 +101,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget)
 
   -- Insert a node into a table.
   local function Insert(t, node)
+    if not t.n then error("Insert given bad input, please report this.", 2) end
     t.n = t.n + 1
     t[t.n] = node
   end
@@ -82,6 +110,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget)
   -- takes a node or node index.
   local function Remove(t, node)
     -- If given a number index, remove it.
+    if not t.n then error("Remove given bad input, please report this.", 2) end
     if t[node] then -- Table indices are numbers.
       t.n = t.n - 1
       return table.remove(t, node)
@@ -98,6 +127,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget)
   -- Gets the lowest fcost node from a list.
   local function GetLowest(t)
     local min = math.huge
+    local minH = math.huge
     local minIndex = -1
 
     -- return nothing if failure.
@@ -109,7 +139,16 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget)
       if t[i].F < min then
         min = t[i].F
         minIndex = i
+      elseif t[i].F == min then
+        if t[i].H < minH then
+          minIndex = i
+          minH = t[i].H
+        end
       end
+    end
+
+    if minIndex == -1 then
+      error("Min index is still -1, this should not happen. Please report.", 2)
     end
 
     return minIndex
@@ -130,9 +169,9 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget)
       table.insert(
         path,
         {
-          X = node.x + map.offset[1],
-          Y = node.y + map.offset[2],
-          Z = node.z + map.offset[3]
+          X = node.x,-- + map.offset[1],
+          Y = node.y,-- + map.offset[2],
+          Z = node.z,-- + map.offset[3]
         }
       )
       node = node.Parent
@@ -142,11 +181,14 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget)
 
     CleanNodes(CLOSED)
     CleanNodes(OPEN)
+    CleanPlacements(debug)
 
     return path
   end
 
-  Insert(beginNode)
+  Insert(OPEN, beginNode)
+  PutBlock(debug, beginNode.x, beginNode.y, beginNode.z, "minecraft:white_stained_glass")
+  beginNode.F = 0
 
   for i = 1, budget do
     local lowest = GetLowest(OPEN)
@@ -155,12 +197,15 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget)
     end
     local current = Remove(OPEN, lowest)
     Insert(CLOSED, current)
+    PutBlock(debug, current.x, current.y, current.z, "minecraft:black_stained_glass")
 
     if current == endNode then
       return true, GetPath(endNode)
     end
 
-    for facing, neighbor in ipairs(map:GetNeighbors(current.x, current.y, current.z)) do
+    local neighbors = map:GetNeighbors(current.x, current.y, current.z)
+    for facing = 0, 5 do
+      local neighbor = neighbors[facing]
       if neighbor.S ~= 1 and not IsIn(CLOSED, neighbor) then
         local f, g, h = map:CalculateFGHCost(neighbor, beginNode, endNode)
         if f < neighbor.F then
@@ -169,11 +214,13 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget)
           neighbor.H = h
           neighbor.Parent = current
           if not IsIn(OPEN, neighbor) then
+            PutBlock(debug, neighbor.x, neighbor.y, neighbor.z, "minecraft:white_stained_glass")
             Insert(OPEN, neighbor)
           end
         end
       end
     end
+    os.sleep(3)
   end
 
   return false, "Budget expended"
@@ -294,38 +341,33 @@ function index:ScanIntoMapUsing(object, range, offsetx, offsety, offsetz, callba
   local valid = {
     geoScanner = function()
       -- Scan
-      local scan = peripheral.call(object, "scan", range)
+      local scan, err = peripheral.call(object, "scan", range)
 
-      local obsLoc = {}
-
-      -- For each block in the scan range, add it as an obstacle.
-      for i, block in ipairs(scan) do
-        self.Map:Get(block.x + offsetx, block.y + offsety, block.z + offsetz).S = 1
-        obsLoc[string.format("%d|%d|%d", block.x, block.y, block.z)] = true
-      end
-
-      -- For each block ***not*** in scan range, add it as air.
-      for x = -range, range do
-        for y = -range, range do
-          for z = -range, range do
-            if not obsLoc[string.format("%d|%d|%d", x, y, z)] then
-              self.Map:Get(x + offsetx, y + offsety, z + offsetz).S = 2
+      if scan then
+        -- Initialize every block in range as air.
+        for x = -range, range do
+          for y = -range, range do
+            for z = -range, range do
+              self:AddAir(x + offsetx, y + offsety, z + offsetz)
             end
           end
         end
+
+        -- For each block in the scan range, add it as an obstacle.
+        for i, block in ipairs(scan) do
+          self:AddObstacle(block.x + offsetx, block.y + offsety, block.z + offsetz)
+        end
       end
 
-      return scan
+      return scan, err
     end
   }
 
   if valid[peripheral.getType(object)] then
-    valid[peripheral.getType(object)]()
+    return valid[peripheral.getType(object)]()
   else
     error(string.format("Unsupported scanner: %s", peripheral.getType(object)), 2)
   end
-
-  return self
 end
 
 function a.New(name, offsetx, offsety, offsetz)

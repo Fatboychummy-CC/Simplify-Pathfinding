@@ -178,7 +178,7 @@ function MapObject:GetNeighbors(x, y, z)
   return node.Neighbors
 end
 
-local function CreateNode(self, x, y, z, status)
+local function CreateNode(self, x, y, z, status, force)
   local lx = x - self.offset[1]
   local ly = y - self.offset[2]
   local lz = z - self.offset[3]
@@ -188,14 +188,13 @@ local function CreateNode(self, x, y, z, status)
     or z > 127 or z < -128 then
     error("Bad arguments: Number not within signed 1-byte range.", 3)
   end
-
   if not self.Map[lx] then
     self.Map[lx] = {}
   end
   if not self.Map[lx][ly] then
     self.Map[lx][ly] = {}
   end
-  if not self.Map[lx][ly][lz] then
+  if force then
     self.Map[lx][ly][lz] = {
       x = x,
       y = y,
@@ -207,14 +206,34 @@ local function CreateNode(self, x, y, z, status)
       P2 = 0, -- Used internally to avoid pathfinding along edges.
       S = status or 0   -- Node state -- 0 = unknown, 1 = blocked, 2 = air
     }
-
     -- Edges of range will reject pathfinding.
     if lx == 127 or lx == -128
       or ly == 127 or ly == -128
       or lz == 127 or lz == -128 then
       self.Map[lx][ly][lz].P2 = math.huge
     end
-    self.loadedNodes = self.loadedNodes + 1
+  else
+    if not self.Map[lx][ly][lz] then
+      self.Map[lx][ly][lz] = {
+        x = x,
+        y = y,
+        z = z,  -- Internal position for internal usage
+        H = 0,  -- Distance to end node
+        G = 0,  -- Distance to start node
+        F = math.huge,  -- Combined values of H + G + P + TP
+        P = 0,
+        P2 = 0, -- Used internally to avoid pathfinding along edges.
+        S = status or 0   -- Node state -- 0 = unknown, 1 = blocked, 2 = air
+      }
+
+      -- Edges of range will reject pathfinding.
+      if lx == 127 or lx == -128
+        or ly == 127 or ly == -128
+        or lz == 127 or lz == -128 then
+        self.Map[lx][ly][lz].P2 = math.huge
+      end
+      self.loadedNodes = self.loadedNodes + 1
+    end
   end
 
   return self.Map[lx][ly][lz]
@@ -322,15 +341,7 @@ function MapObject:AddObstacle(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
-  -- ensure all numbers are in range
-  local ns = {x, y, z}
-  for i = 1, 3 do
-    if not pcall(string.pack, "<i1", ns[i]) then
-      error(string.format("Bad argument #%d: Expected number in signed 1-byte range.", i), 2)
-    end
-  end
-
-  CreateNode(self, x, y, z, 1)
+  CreateNode(self, x, y, z, 1, true)
 
   return self
 end
@@ -347,16 +358,9 @@ function MapObject:AddUnknown(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
-  -- ensure all numbers are in range
-  local ns = {x, y, z}
-  for i = 1, 3 do
-    if not pcall(string.pack, "<i1", ns[i]) then
-      error(string.format("Bad argument #%d: Expected number in signed 1-byte range.", i), 2)
-    end
-  end
-
-  local node = CreateNode(self, x, y, z, 0)
+  local node = CreateNode(self, x, y, z, 0, true)
   node.P = 10
+  node.S = 0
 
   return self
 end
@@ -372,15 +376,7 @@ function MapObject:AddAir(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
-  -- ensure all numbers are in range
-  local ns = {x, y, z}
-  for i = 1, 3 do
-    if not pcall(string.pack, "<i1", ns[i]) then
-      error(string.format("Bad argument #%d: Expected number in signed 1-byte range.", i), 2)
-    end
-  end
-
-  CreateNode(self, x, y, z, 2)
+  CreateNode(self, x, y, z, 2, true)
 
   return self
 end
