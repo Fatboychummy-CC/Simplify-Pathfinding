@@ -34,10 +34,6 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2)
 
 end
 
-function index:SetMapSize(x, y, z)
-
-end
-
 --- Loads a map from a file.
 -- @tparam string filename the absolute path to the file.
 -- @tparam function? callback The callback to be used for loading.
@@ -56,6 +52,8 @@ function index:LoadMap(filename, callback)
 end
 
 function index:GetMap()
+  CheckSelf(self)
+
   return self.map
 end
 
