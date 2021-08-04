@@ -191,6 +191,7 @@ local function CreateNode(self, x, y, z, status)
       H = 0,  -- Distance to end node
       G = 0,  -- Distance to start node
       F = 0,  -- Combined values of H + G + P + TP
+      P = 0,
       S = status or 0   -- Node state -- 0 = unknown, 1 = blocked, 2 = air
     }
     self.loadedNodes = self.loadedNodes + 1
@@ -369,7 +370,8 @@ function MapObject:AddUnknown(x, y, z)
     end
   end
 
-  CreateNode(self, x, y, z, 0)
+  local node = CreateNode(self, x, y, z, 0)
+  node.P = 10
 
   return self
 end
@@ -426,13 +428,13 @@ function MapObject:CalculateGCost(node, startNode)
   return CalculateHCost(node, startNode)
 end
 
-function MapObject:CalculateFCost(node, startNode, endNode)
+function MapObject:CalculateFGHCost(node, startNode, endNode)
   CheckSelf(self)
   expect(1, node     , "table")
   expect(1, startNode, "table")
   expect(1, endNode  , "table")
 
-  local totalCost = 0
+  local FCost = 0
 
   -- Calculate if this node is facing a different direction than the parent node
   if node.Parent then
@@ -442,19 +444,20 @@ function MapObject:CalculateFCost(node, startNode, endNode)
       -- thus incrementing cost of all first moves by 1.
       -- though this shouldn't have consequences.
       if _node == node and dir ~= node.Parent.Facing then
-        totalCost = 1
+        FCost = 1
         node.Facing = dir
       end
     end
   end
 
-
-  totalCost = totalCost + self:CalculateHCost(node, endNode) -- add H cost
-            + self:CalculateGCost(node, startNode) -- add G cost
-            + node.P -- Add penalty for unknown node.
+  local HCost = self:CalculateHCost(node, endNode)
+  local GCost = self:CalculateGCost(node, startNode)
+  FCost = FCost + HCost -- add H cost
+        + GCost -- add G cost
+        + node.P -- Add penalty for unknown node.
   --
 
-  return totalCost
+  return FCost, GCost, HCost
 end
 
 --- This function loads a map from a file, it determines the mode required while loading.
