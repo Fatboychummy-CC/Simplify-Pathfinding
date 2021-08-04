@@ -77,7 +77,7 @@ function MapObject:Serialize(mode, callback)
   Add(string.pack("<i3", self.offset[1])) -- offset y
   Add(string.pack("<i3", self.offset[1])) -- offset z
 
-  for xIndex, YList in pairs(self.map) do
+  for xIndex, YList in pairs(self.Map) do
     for yIndex, ZList in pairs(YList) do
       self.status.percent = count / max
       callback(self.status.state, self.status.percent, self.name)
@@ -162,31 +162,31 @@ function MapObject:GetNeighbors(x, y, z)
   -- Offsets do not need to be calculated here
   -- using self:Get does that implicitly.
 
-  local map = self.map
+  local map = self.Map
 
   local node = self:Get(x, y, z)
-  node.neighbors = {}
+  node.Neighbors = {}
   for i = 1, 6 do
     local _x, _y, _z, dirname = table.unpack(directions[i], 1, 4)
     _x = _x + x
     _y = _y + y
     _z = _z + z
 
-    node.neighbors[dirname] = self:Get(_x, _y, _z) -- add neighbor to node
+    node.Neighbors[dirname] = self:Get(_x, _y, _z) -- add neighbor to node
   end
 
-  return node.neighbors
+  return node.Neighbors
 end
 
 local function CreateNode(self, x, y, z, status)
-  if not self.map[x] then
-    self.map[x] = {}
+  if not self.Map[x] then
+    self.Map[x] = {}
   end
-  if not self.map[x][y] then
-    self.map[x][y] = {}
+  if not self.Map[x][y] then
+    self.Map[x][y] = {}
   end
-  if not self.map[x][y][z] then
-    self.map[x][y][z] = {
+  if not self.Map[x][y][z] then
+    self.Map[x][y][z] = {
       x = x, y = y, z = z, -- Internal position for internal usage
       H = 0,  -- Distance to end node
       G = 0,  -- Distance to start node
@@ -196,7 +196,7 @@ local function CreateNode(self, x, y, z, status)
     self.loadedNodes = self.loadedNodes + 1
   end
 
-  return self.map[x][y][z]
+  return self.Map[x][y][z]
 end
 
 --- This function gets a node (and creates it if need be).
@@ -265,8 +265,8 @@ function MapObject:Pregen(minx, miny, minz, maxx, maxy, maxz, state, callback)
   self.status.percent = 0
   callback(self.status.state, self.status.percent, self.name)
 
-  self.map = {}
-  local map = self.map
+  self.Map = {}
+  local map = self.Map
   local max1 = maxx * maxy * maxz
   local max2 = minx * miny * minz
   local max = max2 > 0 or max1 < 0 and max1 - max2
@@ -274,7 +274,7 @@ function MapObject:Pregen(minx, miny, minz, maxx, maxy, maxz, state, callback)
   local count = 0
 
   if max == 0 then
-    self.map = {}
+    self.Map = {}
     self.status.percent = 1
     self.status.state = "resize-complete"
     callback(self.status.state, self.status.percent, self.name)
@@ -466,7 +466,7 @@ function map.FromFile(filename, callback)
   expect(1, filename, "string")
   expect(2, callback, "function", "nil")
 
-  local data = setmetatable({_ISMAP = true, map = {}}, mapmt)
+  local data = setmetatable({_ISMAP = true, Map = {}}, mapmt)
   local h = io.open(filename, 'rb')
 
   local ok, err = pcall(function()
