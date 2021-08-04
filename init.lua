@@ -270,6 +270,64 @@ function index:SetMapOffset(x, y, z)
   return self
 end
 
+--- Depending on the mod of the scanner, will scan blocks around the scanner and add them to the map.
+-- @tparam string object The peripheral name to be used to scan.
+-- @tparam number range The range to be used.
+-- @tparam number? offsetx The offset x position, defaults to 0.
+-- @tparam number? offsety The offset y position, defaults to 0.
+-- @tparam number? offsetz The offset z position, defaults to 0.
+-- @tparam function? callback The callback to be called while loading.
+-- @return The result of the scan, to be used by user.
+function index:ScanIntoMapUsing(object, range, offsetx, offsety, offsetz, callback)
+  CheckSelf(self)
+  expect(1, object, "string")
+  expect(2, range, "number")
+  expect(3, offsetx, "number", "nil")
+  expect(4, offsety, "number", "nil")
+  expect(5, offsetz, "number", "nil")
+  expect(6, callback, "function", "nil")
+  offsetx = offsetx or 0
+  offsety = offsety or 0
+  offsetz = offsetz or 0
+  callback = callback or function() end
+
+  local valid = {
+    geoScanner = function()
+      -- Scan
+      local scan = peripheral.call(object, "scan", range)
+
+      local obsLoc = {}
+
+      -- For each block in the scan range, add it as an obstacle.
+      for i, block in ipairs(scan) do
+        self.map:Get(block.x + offsetx, block.y + offsety, block.z + offsetz).S = 1
+        obsLoc[string.format("%d|%d|%d", block.x, block.y, block.z)] = true
+      end
+
+      -- For each block ***not*** in scan range, add it as air.
+      for x = -range, range do
+        for y = -range, range do
+          for z = -range, range do
+            if not obsLoc[string.format("%d|%d|%d", x, y, z)] then
+              self.map:Get(x + offsetx, y + offsety, z + offsetz).S = 2
+            end
+          end
+        end
+      end
+
+      return scan
+    end
+  }
+
+  if valid[peripheral.getType(object)] then
+    valid[peripheral.getType(object)]()
+  else
+    error(string.format("Unsupported scanner: %s", peripheral.getType(object)), 2)
+  end
+
+  return self
+end
+
 function a.New()
   return setmetatable(
     {
