@@ -220,7 +220,6 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
         end
       end
     end
-    os.sleep(3)
   end
 
   return false, "Budget expended"
