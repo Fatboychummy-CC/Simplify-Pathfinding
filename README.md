@@ -39,6 +39,11 @@ local path = pathfinder:Pathfind(
 )
 ```
 
+## Installation
+```
+wget run https://raw.githubusercontent.com/Fatboychummy-CC/SimplifyUpdate/master/Updater.lua https://raw.githubusercontent.com/Fatboychummy-CC/SimplifyPathfinding/master/Simplifile /SimplifyPathfinding
+```
+
 ### Limits
 * Internal map is limited to range -128 to 127 (signed 1-byte integer)
   * Because of this, you should use offsets if you wish to directly plug in GPS coordinates.
