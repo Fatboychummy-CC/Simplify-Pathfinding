@@ -418,13 +418,6 @@ function MapObject:CalculateFCost(node, startNode, endNode)
   return totalCost
 end
 
---- This function clones the map.
--- @treturn mapobject
-function MapObject:Clone()
-  CheckSelf(self)
-
-end
-
 --- This function loads a map from a file, it determines the mode required while loading.
 -- Does not yet support overflow files.
 -- @tparam string filename The name of the file to be loaded.
