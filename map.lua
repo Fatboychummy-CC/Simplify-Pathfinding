@@ -74,8 +74,8 @@ function MapObject:Serialize(mode, callback)
   Add(string.pack("<i1", #self.name))     -- name length
   Add(self.name)                          -- name
   Add(string.pack("<i3", self.offset[1])) -- offset x
-  Add(string.pack("<i3", self.offset[1])) -- offset y
-  Add(string.pack("<i3", self.offset[1])) -- offset z
+  Add(string.pack("<i3", self.offset[2])) -- offset y
+  Add(string.pack("<i3", self.offset[3])) -- offset z
 
   for xIndex, YList in pairs(self.Map) do
     for yIndex, ZList in pairs(YList) do
