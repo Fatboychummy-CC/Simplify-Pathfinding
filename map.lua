@@ -444,10 +444,11 @@ function MapObject:CalculateFGHCost(node, startNode, endNode)
       -- thus incrementing cost of all first moves by 1.
       -- though this shouldn't have consequences.
       if _node == node and dir ~= node.Parent.Facing then
-        FCost = 1
         if dir > 3 then
+          FCost = 0
           node.Facing = node.Parent.Facing
         else
+          FCost = 1
           node.Facing = dir
         end
         break
