@@ -381,43 +381,30 @@ function MapObject:AddAir(x, y, z)
   return self
 end
 
-
+local deg, atan2, min = math.deg, math.atan2, math.min
 function MapObject:CalculateHCost(node, endNode)
   CheckSelf(self)
   expect(1, node   , "table")
   expect(2, endNode, "table")
 
   -- Determine amount of movements required to get to the end node.
-  local cost = abs(node.y - endNode.y) -- start with Y movements, no turn cost.
+  local cost = 0
   if node.Facing then
     local f = node.Facing
-    -- we need to face the direction we're closest to the "edge" of
-    -- or preferrably, if we're aligned properly already, go straight to
-    -- one of the edges even if it's farther than the closer
-    if (f == 0 and node.z <= endNode.z) or (f == 2 and node.z >= endNode.z) then -- positive/negative Z facing
-      -- all good on Z part, don't need a turn.
 
-      -- but lets check X axis
-      if node.x ~= endNode.x then
-        cost = cost + 1 -- node off on X axis, at least one turn needed.
-      end
-    elseif (f == 1 and node.x >= endNode.x) or (f == 3 and node.x <= endNode.x) then -- negative X facing
-      -- All good on X part, don't need a turn.
-
-      -- but lets check Z axis
-      if node.z ~= endNode.z then
-        cost = cost + 1
-      end
-    else
-      -- Not aligned properly to any axis, and not on any of the direct axis,
-      -- two turns required.
-      cost = cost + 2
-    end
+    -- Calculate angle from end node.
+    local dx = node.x - endNode.x
+    local dz = node.z - endNode.z
+    local angle = deg(atan2(dz, dx)) + 180
+    local angleFacing = angle / 90
+    cost = min(abs(angleFacing - node.Facing), abs(angleFacing - node.Facing + 4))
   end
 
-  -- add the amount of moves needed on x / z axis.
-  return cost + abs(node.x - endNode.x)
-         + abs(node.z - endNode.z)
+  -- add the amount of moves needed on x / z axis, but triple the penalty for distance.
+  return abs(node.x - endNode.x) * 3
+       + abs(node.y - endNode.y) * 3
+       + abs(node.z - endNode.z) * 3
+       + cost
 end
 
 function MapObject:CalculateGCost(node, startNode)
@@ -425,7 +412,9 @@ function MapObject:CalculateGCost(node, startNode)
   expect(1, node     , "table")
   expect(2, startNode, "table")
 
-  return self:CalculateHCost(node, startNode)
+  return abs(node.x - startNode.x)
+       + abs(node.y - startNode.y)
+       + abs(node.z - startNode.z)
 end
 
 function MapObject:CalculateFGHCost(node, startNode, endNode)
@@ -433,8 +422,6 @@ function MapObject:CalculateFGHCost(node, startNode, endNode)
   expect(1, node     , "table")
   expect(1, startNode, "table")
   expect(1, endNode  , "table")
-
-  local FCost = 0
 
   -- Calculate if this node is facing a different direction than the parent node
   if node.Parent then
@@ -445,15 +432,12 @@ function MapObject:CalculateFGHCost(node, startNode, endNode)
       -- though this shouldn't have consequences.
       if _node == node and dir ~= node.Parent.Facing then
         if dir > 3 then
-          FCost = 0
           node.Facing = node.Parent.Facing
         else
-          FCost = 1
           node.Facing = dir
         end
         break
       elseif _node == node then
-        FCost = 0
         node.Facing = node.Parent.Facing
         break
       end
@@ -462,7 +446,7 @@ function MapObject:CalculateFGHCost(node, startNode, endNode)
 
   local HCost = self:CalculateHCost(node, endNode)
   local GCost = self:CalculateGCost(node, startNode)
-  FCost = FCost + HCost -- add H cost
+  local FCost = HCost -- add H cost
         + GCost -- add G cost
         + node.P -- Add penalty for unknown node.
         + node.P2 -- Add penalty for being on the edge of the map.
