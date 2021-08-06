@@ -138,6 +138,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
     for i = 1, t.n do
       if t[i].F < min then
         min = t[i].F
+        minH = t[i].H
         minIndex = i
       elseif t[i].F == min then
         if t[i].H < minH then
