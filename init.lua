@@ -224,6 +224,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
 
   return false, "Budget expended"
 end
+mt.__call = index.Pathfind -- Allow use of Pathfinder() as well as Pathfinder:Pathfind()
 
 --- Loads a map from a file.
 -- @tparam string filename the absolute path to the file.
