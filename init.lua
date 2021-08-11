@@ -11,6 +11,16 @@ if not string.find(package.path, addon, nil, 1) then
   package.path = package.path .. addon
 end
 
+-- Yield function to yield when needed.
+local endTime = os.epoch("utc") + 3000
+local function yieldCheck()
+  if endTime < os.epoch("utc") then
+    endTime = os.epoch("utc") + 3000
+    os.queueEvent("pathfinder_dummy_event")
+    os.pullEvent("pathfinder_dummy_event")
+  end
+end
+
 local ok, expect = pcall(require, "cc.expect")
 if ok then
   expect = expect.expect
@@ -66,7 +76,7 @@ end
 -- @tparam number z2 The second point position.
 -- @tparam number startFacing The facing the turtle begins as.
 -- @tparam number budget The loop budget to run with. If budget iterations have run, pathfinding will abort. Defaults to 10000.
--- @tparam boolean debug If enabled, assumes this is a command computer and places blocks along search path.
+-- @tparam boolean debug If true, draws path as it is being calculated. Slows significantly due to setblock ratelimits.
 -- @treturn boolean If a valid path was found.
 -- @treturn table? The path that was found.
 function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
@@ -169,6 +179,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
     while node.Parent do
       table.insert(
         path,
+        1,
         {
           X = node.x,-- + map.offset[1],
           Y = node.y,-- + map.offset[2],
@@ -198,6 +209,9 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
     if not lowest then
       return false, "All available nodes traversed, no path found."
     end
+
+    yieldCheck()
+
     local current = Remove(OPEN, lowest)
     Insert(CLOSED, current)
     PutBlock(debug, current.x, current.y, current.z, "minecraft:black_stained_glass")
@@ -228,6 +242,90 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
   return false, "Budget expended"
 end
 mt.__call = index.Pathfind -- Allow use of Pathfinder() as well as Pathfinder:Pathfind()
+
+--- Uses brute-force to shorten a path.
+-- Please note this function is particularly slow ( O(n^2) ), so use it only when absolutely needed, or on shorter paths! (< 25-ish nodes).
+-- An alternative is splitting
+-- @tparam table path The path to shorten.
+-- @tparam function? callback The function to be called while running.
+-- @tparam boolean? debug If true, draws path as it is being calculated. Slows significantly due to setblock ratelimits.
+function index:BruteShorten(path, callback, debug)
+  CheckSelf(self)
+  expect(1, path, "table")
+  expect(2, callback, "function", "nil")
+  expect(3, debug, "boolean", "nil")
+  callback = callback or function() end
+
+  local bestPath = {}
+  for i = 1, #path do
+    bestPath[i] = path[i]
+  end
+
+  local function ReplaceNodes(i1, i2, nodes)
+    -- remove old nodes
+    for i = i2, i1, -1 do
+      table.remove(bestPath, i)
+    end
+
+    -- add new nodes
+    for j = 1, #nodes do
+      table.insert(bestPath, i1 + j - 1, nodes[j])
+    end
+  end
+
+  local len = #path
+  local i = 2
+  while bestPath[i] do
+    local node, prevNode = bestPath[i], bestPath[i - 1]
+    local x1, y1, z1 = node.X, node.Y, node.Z
+    local startFacing = 0
+
+    yieldCheck()
+    callback("bruteforce-shorten", i / len)
+
+    -- determine facing to next node.
+    if prevNode then
+      if node.Z > prevNode.Z then -- +z
+        startFacing = 0
+      elseif node.X < prevNode.X then -- -x
+        startFacing = 1
+      elseif node.Z < prevNode.Z then -- -z
+        startFacing = 2
+      else -- +x
+        startFacing = 3
+      end
+    end
+
+    local betterPathFound = false
+    for dist = 3, len - i + 1 do
+      local target = bestPath[i + dist]
+      if target then
+        local x2, y2, z2 = target.X, target.Y, target.Z
+
+        local ok, newPath = self:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, 10000, debug)
+        if not ok then
+          return ok, newPath
+        end
+        local newLength = #newPath
+
+        if newLength < dist then
+          -- better path found!
+          ReplaceNodes(i, i + dist, newPath)
+          betterPathFound = true
+          break
+        end
+      end
+    end
+
+    if not betterPathFound then
+      i = i + 1
+    end
+  end
+
+  callback("bruteforce-shorten-complete", 1)
+
+  return true, bestPath
+end
 
 --- Loads a map from a file.
 -- @tparam string filename the absolute path to the file.
