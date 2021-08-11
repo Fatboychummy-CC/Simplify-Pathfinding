@@ -229,6 +229,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
           neighbor.F = f
           neighbor.G = g
           neighbor.H = h
+          neighbor.L = current.L + 0.1
           neighbor.Parent = current
           if not IsIn(OPEN, neighbor) then
             PutBlock(debug, neighbor.x, neighbor.y, neighbor.z, "minecraft:white_stained_glass")

@@ -405,9 +405,9 @@ function MapObject:CalculateHCost(node, endNode)
   end
 
   -- add the amount of moves needed on x / z axis, but triple the penalty for distance.
-  return abs(node.x - endNode.x) * 3
-       + abs(node.y - endNode.y) -- Prefer Y values
-       + abs(node.z - endNode.z) * 3
+  return abs(node.x - endNode.x)
+       + abs(node.y - endNode.y)
+       + abs(node.z - endNode.z)
        + cost
 end
 
@@ -454,7 +454,7 @@ function MapObject:CalculateFGHCost(node, startNode, endNode, parentNode)
         + GCost -- add G cost
         + node.P -- Add penalty for unknown node.
         + node.P2 -- Add penalty for being on the edge of the map.
-        + parentNode.L + 1 -- add pathlength penalty
+        + parentNode.L + 0.1 -- add pathlength penalty
   --
 
   return FCost, GCost, HCost
