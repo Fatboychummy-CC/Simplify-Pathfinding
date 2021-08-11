@@ -11,6 +11,16 @@ if not string.find(package.path, addon, nil, 1) then
   package.path = package.path .. addon
 end
 
+-- Yield function to yield when needed.
+local endTime = os.epoch("utc") + 3000
+local function yieldCheck()
+  if endTime < os.epoch("utc") then
+    endTime = os.epoch("utc") + 3000
+    os.queueEvent("pathfinder_dummy_event")
+    os.pullEvent("pathfinder_dummy_event")
+  end
+end
+
 local ok, expect = pcall(require, "cc.expect")
 if ok then
   expect = expect.expect
@@ -66,7 +76,7 @@ end
 -- @tparam number z2 The second point position.
 -- @tparam number startFacing The facing the turtle begins as.
 -- @tparam number budget The loop budget to run with. If budget iterations have run, pathfinding will abort. Defaults to 10000.
--- @tparam boolean debug If enabled, assumes this is a command computer and places blocks along search path.
+-- @tparam boolean debug If true, draws path as it is being calculated. Slows significantly due to setblock ratelimits.
 -- @treturn boolean If a valid path was found.
 -- @treturn table? The path that was found.
 function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
@@ -199,6 +209,9 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
     if not lowest then
       return false, "All available nodes traversed, no path found."
     end
+
+    yieldCheck()
+
     local current = Remove(OPEN, lowest)
     Insert(CLOSED, current)
     PutBlock(debug, current.x, current.y, current.z, "minecraft:black_stained_glass")
@@ -231,8 +244,12 @@ end
 mt.__call = index.Pathfind -- Allow use of Pathfinder() as well as Pathfinder:Pathfind()
 
 --- Uses brute-force to shorten a path.
+-- Please note this function is particularly slow ( O(n^2) ), so use it only when absolutely needed, or on shorter paths! (< 25-ish nodes).
+-- An alternative is splitting
 -- @tparam table path The path to shorten.
-function index:BruteShorten(path, debug)
+-- @tparam function? callback The function to be called while running.
+-- @tparam boolean? debug If true, draws path as it is being calculated. Slows significantly due to setblock ratelimits.
+function index:BruteShorten(path, callback, debug)
   CheckSelf(self)
   expect(1, path, "table")
   local bestPath = {}
