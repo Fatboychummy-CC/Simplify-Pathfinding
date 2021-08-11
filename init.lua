@@ -169,6 +169,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
     while node.Parent do
       table.insert(
         path,
+        1,
         {
           X = node.x,-- + map.offset[1],
           Y = node.y,-- + map.offset[2],
@@ -240,9 +241,12 @@ function index:BruteShorten(path, debug)
   end
 
   local function ReplaceNodes(i1, i2, nodes)
+    -- remove old nodes
     for i = i2, i1, -1 do
       table.remove(bestPath, i)
     end
+
+    -- add new nodes
     for j = 1, #nodes do
       table.insert(bestPath, i1 + j - 1, nodes[j])
     end
