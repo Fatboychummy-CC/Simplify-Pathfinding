@@ -229,6 +229,73 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
 end
 mt.__call = index.Pathfind -- Allow use of Pathfinder() as well as Pathfinder:Pathfind()
 
+--- Uses brute-force to shorten a path.
+-- @tparam table path The path to shorten.
+function index:BruteShorten(path, debug)
+  CheckSelf(self)
+  expect(1, path, "table")
+  local bestPath = {}
+  for i = 1, #path do
+    bestPath[i] = path[i]
+  end
+
+  local function ReplaceNodes(i1, i2, nodes)
+    for i = i2, i1, -1 do
+      table.remove(bestPath, i)
+    end
+    for j = 1, #nodes do
+      table.insert(bestPath, i1 + j - 1, nodes[j])
+    end
+  end
+
+  local len = #path
+  local i = 2
+  while bestPath[i] do
+    local node, prevNode = bestPath[i], bestPath[i - 1]
+    local x1, y1, z1 = node.X, node.Y, node.Z
+    local startFacing = 0
+    -- determine facing to next node.
+    if prevNode then
+      if node.Z > prevNode.Z then -- +z
+        startFacing = 0
+      elseif node.X < prevNode.X then -- -x
+        startFacing = 1
+      elseif node.Z < prevNode.Z then -- -z
+        startFacing = 2
+      else -- +x
+        startFacing = 3
+      end
+    end
+
+    local betterPathFound = false
+    for dist = 3, len - i + 1 do
+      local target = bestPath[i + dist]
+      if target then
+        local x2, y2, z2 = target.X, target.Y, target.Z
+
+        local ok, newPath = self:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, 10000, debug)
+        if not ok then
+          return ok, newPath
+        end
+        local newLength = #newPath
+
+        if newLength < dist then
+          -- better path found!
+          ReplaceNodes(i, i + dist, newPath)
+          betterPathFound = true
+          break
+        end
+      end
+    end
+
+    if not betterPathFound then
+      i = i + 1
+    end
+  end
+
+  return true, bestPath
+end
+
 --- Loads a map from a file.
 -- @tparam string filename the absolute path to the file.
 -- @tparam function? callback The callback to be used for loading.
