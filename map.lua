@@ -202,6 +202,7 @@ local function CreateNode(self, x, y, z, status, force)
       H = 0,  -- Distance to end node
       G = 0,  -- Distance to start node
       L = 0,  -- Length of current run
+      TC = 0, -- Turn cost
       F = math.huge,  -- Combined values of H + G + P + TP
       P = 0,
       P2 = 0, -- Used internally to avoid pathfinding along edges.
@@ -222,6 +223,7 @@ local function CreateNode(self, x, y, z, status, force)
         H = 0,  -- Distance to end node
         G = 0,  -- Distance to start node
         L = 0,  -- Length of current run
+        TC = 0, -- Turn cost
         F = math.huge,  -- Combined values of H + G + P + TP
         P = 0,
         P2 = 0, -- Used internally to avoid pathfinding along edges.
@@ -429,15 +431,18 @@ function MapObject:CalculateFGHCost(node, startNode, endNode, parentNode)
   expect(4, parentNode, "table")
 
   -- Calculate if this node is facing a different direction than the parent node
-  local turnCost = 0
   -- Find ourself in parent's neighbors
+  local turnCost = 0
   local found = false
-  for dir = 0, 3 do
+  for dir = 0, 5 do
     local _node = parentNode.Neighbors[dir]
     if _node == node then
       found = true
       if dir ~= _node.Facing then
+        node.TC = parentNode.TC * 2
         turnCost = 1
+      else
+        node.TC = parentNode.TC
       end
       node.Facing = dir
       break
@@ -449,12 +454,12 @@ function MapObject:CalculateFGHCost(node, startNode, endNode, parentNode)
 
   local HCost = self:CalculateHCost(node, endNode)
   local GCost = self:CalculateGCost(node, startNode)
-  local FCost = turnCost -- add cost of turning (if any)
-        + HCost -- add H cost
+  local FCost = HCost -- add H cost
         + GCost -- add G cost
         + node.P -- Add penalty for unknown node.
         + node.P2 -- Add penalty for being on the edge of the map.
-        + parentNode.L + 0.1 -- add pathlength penalty
+        + node.TC -- Add turn-cost penalty
+        --+ parentNode.L + 0.1 -- add pathlength penalty
   --
 
   return FCost, GCost, HCost

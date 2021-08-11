@@ -94,7 +94,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
   local map = self.Map
   local beginNode = map:Get(x1, y1, z1)
   local endNode = map:Get(x2, y2, z2)
-  local fakeParentNode = {Facing = startFacing}
+  local fakeParentNode = {Facing = startFacing, TC = 1}
 
   local OPEN = {n = 0}
   local CLOSED = {n = 0}
@@ -229,7 +229,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
           neighbor.F = f
           neighbor.G = g
           neighbor.H = h
-          neighbor.L = current.L + 0.1
+          --neighbor.L = current.L + 0.1
           neighbor.Parent = current
           if not IsIn(OPEN, neighbor) then
             PutBlock(debug, neighbor.x, neighbor.y, neighbor.z, "minecraft:white_stained_glass")
