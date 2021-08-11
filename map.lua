@@ -419,9 +419,9 @@ end
 
 function MapObject:CalculateFGHCost(node, startNode, endNode)
   CheckSelf(self)
-  expect(1, node     , "table")
-  expect(1, startNode, "table")
-  expect(1, endNode  , "table")
+  expect(1, node      , "table")
+  expect(2, startNode , "table")
+  expect(3, endNode   , "table")
 
   -- Calculate if this node is facing a different direction than the parent node
   if node.Parent then
