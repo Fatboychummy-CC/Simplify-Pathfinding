@@ -252,6 +252,10 @@ mt.__call = index.Pathfind -- Allow use of Pathfinder() as well as Pathfinder:Pa
 function index:BruteShorten(path, callback, debug)
   CheckSelf(self)
   expect(1, path, "table")
+  expect(2, callback, "function", "nil")
+  expect(3, debug, "boolean", "nil")
+  callback = callback or function() end
+
   local bestPath = {}
   for i = 1, #path do
     bestPath[i] = path[i]
@@ -275,6 +279,10 @@ function index:BruteShorten(path, callback, debug)
     local node, prevNode = bestPath[i], bestPath[i - 1]
     local x1, y1, z1 = node.X, node.Y, node.Z
     local startFacing = 0
+
+    yieldCheck()
+    callback("bruteforce-shorten", i / len)
+
     -- determine facing to next node.
     if prevNode then
       if node.Z > prevNode.Z then -- +z
@@ -313,6 +321,8 @@ function index:BruteShorten(path, callback, debug)
       i = i + 1
     end
   end
+
+  callback("bruteforce-shorten-complete", 1)
 
   return true, bestPath
 end
