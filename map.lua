@@ -201,6 +201,7 @@ local function CreateNode(self, x, y, z, status, force)
       z = z,  -- Internal position for internal usage
       H = 0,  -- Distance to end node
       G = 0,  -- Distance to start node
+      L = 0,  -- Length of current run
       F = math.huge,  -- Combined values of H + G + P + TP
       P = 0,
       P2 = 0, -- Used internally to avoid pathfinding along edges.
@@ -220,6 +221,7 @@ local function CreateNode(self, x, y, z, status, force)
         z = z,  -- Internal position for internal usage
         H = 0,  -- Distance to end node
         G = 0,  -- Distance to start node
+        L = 0,  -- Length of current run
         F = math.huge,  -- Combined values of H + G + P + TP
         P = 0,
         P2 = 0, -- Used internally to avoid pathfinding along edges.
@@ -397,12 +399,14 @@ function MapObject:CalculateHCost(node, endNode)
     local dz = node.z - endNode.z
     local angle = deg(atan2(dz, dx)) + 180
     local angleFacing = angle / 90
-    cost = min(abs(angleFacing - node.Facing), abs(angleFacing - node.Facing + 4))
+    cost = min(abs(angleFacing - node.Facing), abs(angleFacing - node.Facing + 4)) / 2 -- div 2, less priority
+  else
+    error("Attempt to calculate H cost on node with nil facing.", 2)
   end
 
   -- add the amount of moves needed on x / z axis, but triple the penalty for distance.
   return abs(node.x - endNode.x) * 3
-       + abs(node.y - endNode.y) * 3
+       + abs(node.y - endNode.y) -- Prefer Y values
        + abs(node.z - endNode.z) * 3
        + cost
 end
@@ -417,39 +421,40 @@ function MapObject:CalculateGCost(node, startNode)
        + abs(node.z - startNode.z)
 end
 
-function MapObject:CalculateFGHCost(node, startNode, endNode)
+function MapObject:CalculateFGHCost(node, startNode, endNode, parentNode)
   CheckSelf(self)
   expect(1, node      , "table")
   expect(2, startNode , "table")
   expect(3, endNode   , "table")
+  expect(4, parentNode, "table")
 
   -- Calculate if this node is facing a different direction than the parent node
-  if node.Parent then
-    -- Find ourself in parent's neighbors
-    for dir, _node in pairs(node.Parent.Neighbors) do
-      -- first node's facing will be nil,
-      -- thus incrementing cost of all first moves by 1.
-      -- though this shouldn't have consequences.
-      if _node == node and dir ~= node.Parent.Facing then
-        if dir > 3 then
-          node.Facing = node.Parent.Facing
-        else
-          node.Facing = dir
-        end
-        break
-      elseif _node == node then
-        node.Facing = node.Parent.Facing
-        break
+  local turnCost = 0
+  -- Find ourself in parent's neighbors
+  local found = false
+  for dir = 0, 3 do
+    local _node = parentNode.Neighbors[dir]
+    if _node == node then
+      found = true
+      if dir ~= _node.Facing then
+        turnCost = 1
       end
+      node.Facing = dir
+      break
     end
+  end
+  if not found then
+    node.Facing = parentNode.Facing
   end
 
   local HCost = self:CalculateHCost(node, endNode)
   local GCost = self:CalculateGCost(node, startNode)
-  local FCost = HCost -- add H cost
+  local FCost = turnCost -- add cost of turning (if any)
+        + HCost -- add H cost
         + GCost -- add G cost
         + node.P -- Add penalty for unknown node.
         + node.P2 -- Add penalty for being on the edge of the map.
+        + parentNode.L + 1 -- add pathlength penalty
   --
 
   return FCost, GCost, HCost

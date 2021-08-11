@@ -190,6 +190,8 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
   Insert(OPEN, beginNode)
   PutBlock(debug, beginNode.x, beginNode.y, beginNode.z, "minecraft:white_stained_glass")
   beginNode.F = 0
+  beginNode.Facing = startFacing
+  beginNode.Parent = fakeParentNode
 
   for i = 1, budget do
     local lowest = GetLowest(OPEN)
@@ -208,7 +210,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
     for facing = 0, 5 do
       local neighbor = neighbors[facing]
       if neighbor.S ~= 1 and not IsIn(CLOSED, neighbor) then
-        local f, g, h = map:CalculateFGHCost(neighbor, beginNode, endNode)
+        local f, g, h = map:CalculateFGHCost(neighbor, beginNode, endNode, current)
         if f < neighbor.F then
           neighbor.F = f
           neighbor.G = g
