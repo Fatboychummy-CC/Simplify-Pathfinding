@@ -183,9 +183,9 @@ local function CreateNode(self, x, y, z, status, force)
   local ly = y - self.offset[2]
   local lz = z - self.offset[3]
 
-  if x > 127 or x < -128
-    or y > 127 or y < -128
-    or z > 127 or z < -128 then
+  if lx > 127 or lx < -128
+    or ly > 127 or ly < -128
+    or lz > 127 or lz < -128 then
     error("Bad arguments: Number not within signed 1-byte range.", 3)
   end
   if not self.Map[lx] then
