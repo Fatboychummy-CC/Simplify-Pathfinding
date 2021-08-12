@@ -201,8 +201,7 @@ local function CreateNode(self, x, y, z, status, force)
       z = z,  -- Internal position for internal usage
       H = 0,  -- Distance to end node
       G = 0,  -- Distance to start node
-      L = 0,  -- Length of current run
-      TC = 0, -- Turn cost
+      TC = 1, -- Turn cost
       F = math.huge,  -- Combined values of H + G + P + TP
       P = 0,
       P2 = 0, -- Used internally to avoid pathfinding along edges.
@@ -222,8 +221,7 @@ local function CreateNode(self, x, y, z, status, force)
         z = z,  -- Internal position for internal usage
         H = 0,  -- Distance to end node
         G = 0,  -- Distance to start node
-        L = 0,  -- Length of current run
-        TC = 0, -- Turn cost
+        TC = 1, -- Turn cost
         F = math.huge,  -- Combined values of H + G + P + TP
         P = 0,
         P2 = 0, -- Used internally to avoid pathfinding along edges.
@@ -421,11 +419,15 @@ function MapObject:CalculateFGHCost(node, startNode, endNode, parentNode)
     local _node = parentNode.Neighbors[dir]
     if _node == node then
       found = true
-      if dir ~= _node.Facing then
-        node.TC = parentNode.TC * 2
-        turnCost = 1
+      if dir ~= parentNode.Facing then
+        node.TC = parentNode.TC + 1
+        turnCost = node.TC
+        if dir > 3 then
+          turnCost = turnCost / 2
+        end
       else
         node.TC = parentNode.TC
+        turnCost = 0
       end
       node.Facing = dir
       break
@@ -441,7 +443,7 @@ function MapObject:CalculateFGHCost(node, startNode, endNode, parentNode)
         + GCost -- add G cost
         + node.P -- Add penalty for unknown node.
         + node.P2 -- Add penalty for being on the edge of the map.
-        + node.TC -- Add turn-cost penalty
+        + turnCost -- Add turn-cost penalty
         --+ parentNode.L + 0.1 -- add pathlength penalty
   --
 
