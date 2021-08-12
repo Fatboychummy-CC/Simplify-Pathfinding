@@ -399,9 +399,7 @@ function MapObject:CalculateGCost(node, startNode)
   expect(1, node     , "table")
   expect(2, startNode, "table")
 
-  return abs(node.x - startNode.x)
-       + abs(node.y - startNode.y)
-       + abs(node.z - startNode.z)
+  return self:CalculateHCost(node, startNode)
 end
 
 function MapObject:CalculateFGHCost(node, startNode, endNode, parentNode)
