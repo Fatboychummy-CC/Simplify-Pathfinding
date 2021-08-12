@@ -432,7 +432,7 @@ function MapObject:CalculateFGHCost(node, startNode, endNode, parentNode)
     end
   end
   if not found then
-    node.Facing = parentNode.Facing
+    error("Attempt to calculate FGHcost of node which is not neighbor of inputted parent!", 2)
   end
 
   local HCost = self:CalculateHCost(node, endNode)
