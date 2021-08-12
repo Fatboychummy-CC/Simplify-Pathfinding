@@ -391,26 +391,9 @@ function MapObject:CalculateHCost(node, endNode)
   expect(1, node   , "table")
   expect(2, endNode, "table")
 
-  -- Determine amount of movements required to get to the end node.
-  local cost = 0
-  if node.Facing then
-    local f = node.Facing
-
-    -- Calculate angle from end node.
-    local dx = node.x - endNode.x
-    local dz = node.z - endNode.z
-    local angle = deg(atan2(dz, dx)) + 180
-    local angleFacing = angle / 90
-    cost = min(abs(angleFacing - node.Facing), abs(angleFacing - node.Facing + 4)) / 2 -- div 2, less priority
-  else
-    error("Attempt to calculate H cost on node with nil facing.", 2)
-  end
-
-  -- add the amount of moves needed on x / z axis, but triple the penalty for distance.
   return abs(node.x - endNode.x)
        + abs(node.y - endNode.y)
        + abs(node.z - endNode.z)
-       + cost
 end
 
 function MapObject:CalculateGCost(node, startNode)
