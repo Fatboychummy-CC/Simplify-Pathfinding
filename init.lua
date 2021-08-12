@@ -449,6 +449,7 @@ function index:ScanIntoMapUsing(object, range, offsetx, offsety, offsetz, callba
         -- Initialize every block in range as air.
         for x = -range, range do
           for y = -range, range do
+            yieldCheck()
             for z = -range, range do
               self:AddAir(x + offsetx, y + offsety, z + offsetz)
             end
