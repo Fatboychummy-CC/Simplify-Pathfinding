@@ -419,6 +419,7 @@ function MapObject:CalculateFGHCost(node, startNode, endNode, parentNode)
   expect(3, endNode   , "table")
   expect(4, parentNode, "table")
 
+  -- @TODO Set this up so direction is actually handled better.
   -- Calculate if this node is facing a different direction than the parent node
   -- Find ourself in parent's neighbors
   local turnCost = 0
