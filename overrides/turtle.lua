@@ -294,6 +294,23 @@ return function(pathfinderObj, override)
             end
             ensure(turtle.forward, turtle.attack, turtle.dig)
           end
+        end,
+
+        -- Function that follows a path from pathfinder
+        followPath = function(path, canAttack, canDig)
+          expect(1, path, "table")
+          expect(2, canAttack, "boolean", "nil")
+          expect(3, canDig, "boolean", "nil")
+
+          for i = 1, #path do
+            turtle.simpleGoTo(path[i].X, path[i].Y, path[i].Z, canAttack, canDig)
+          end
+        end,
+        getPosition = function()
+          return position[1], position[2], position[3]
+        end,
+        getFacing = function()
+          return facing
         end
       }
 
