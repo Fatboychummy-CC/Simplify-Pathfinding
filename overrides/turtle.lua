@@ -230,6 +230,11 @@ return function(pathfinderObj, override)
 
         -- Simple goto function that just attempts to move in a direction
         simpleGoTo = function(x, y, z, canAttack, canDig)
+          expect(1, x, "number")
+          expect(2, y, "number")
+          expect(3, z, "number")
+          expect(4, canAttack, "boolean", "nil")
+          expect(5, canDig   , "boolean", "nil")
 
           -- This subfunction will attack and dig when movement fails, if allowed
           -- if neither are allowed, will error.
