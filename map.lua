@@ -402,6 +402,16 @@ function MapObject:CalculateGCost(node, startNode)
   return self:CalculateHCost(node, startNode)
 end
 
+function MapObject:MakeStarterNode(node, originFacing)
+  CheckSelf(self)
+  expect(1, node, "table")
+  expect(2, originFacing, "number")
+
+  node.F = 0
+  node.Facing = startFacing
+  node.Parent = {Facing = startFacing}
+end
+
 function MapObject:CalculateFGHCost(node, startNode, endNode, parentNode)
   CheckSelf(self)
   expect(1, node      , "table")

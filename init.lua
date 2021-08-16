@@ -94,7 +94,6 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
   local map = self.Map
   local beginNode = map:Get(x1, y1, z1)
   local endNode = map:Get(x2, y2, z2)
-  local fakeParentNode = {Facing = startFacing, TC = 1}
 
   local OPEN = {n = 0}
   local CLOSED = {n = 0}
@@ -200,9 +199,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
 
   Insert(OPEN, beginNode)
   PutBlock(debug, beginNode.x, beginNode.y, beginNode.z, "minecraft:white_stained_glass")
-  beginNode.F = 0
-  beginNode.Facing = startFacing
-  beginNode.Parent = fakeParentNode
+  map:MakeStarterNode(beginNode, startFacing)
 
   for i = 1, budget do
     local lowest = GetLowest(OPEN)
