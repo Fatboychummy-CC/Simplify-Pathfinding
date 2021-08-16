@@ -201,7 +201,7 @@ local function CreateNode(self, x, y, z, status, force)
       z = z,  -- Internal position for internal usage
       H = 0,  -- Distance to end node
       G = 0,  -- Distance to start node
-      TC = 1, -- Turn cost
+      TC = 0, -- Turn cost
       F = math.huge,  -- Combined values of H + G + P + TP
       P = 0,
       P2 = 0, -- Used internally to avoid pathfinding along edges.
@@ -221,7 +221,7 @@ local function CreateNode(self, x, y, z, status, force)
         z = z,  -- Internal position for internal usage
         H = 0,  -- Distance to end node
         G = 0,  -- Distance to start node
-        TC = 1, -- Turn cost
+        TC = 0, -- Turn cost
         F = math.huge,  -- Combined values of H + G + P + TP
         P = 0,
         P2 = 0, -- Used internally to avoid pathfinding along edges.
@@ -383,7 +383,7 @@ function MapObject:AddAir(x, y, z)
   return self
 end
 
-local deg, atan2, min = math.deg, math.atan2, math.min
+local deg, atan2, min, sqrt = math.deg, math.atan2, math.min, math.sqrt
 function MapObject:CalculateHCost(node, endNode)
   CheckSelf(self)
   expect(1, node   , "table")
@@ -419,15 +419,16 @@ function MapObject:CalculateFGHCost(node, startNode, endNode, parentNode)
       found = true
       if dir ~= parentNode.Facing then
         node.TC = parentNode.TC + 1
-        turnCost = node.TC
-        if dir > 3 then
-          turnCost = turnCost / 2
-        end
+        turnCost = 1
       else
         node.TC = parentNode.TC
         turnCost = 0
       end
-      node.Facing = dir
+      if dir < 4 then
+        node.Facing = dir
+      else
+        node.Facing = parentNode.Facing
+      end
       break
     end
   end
