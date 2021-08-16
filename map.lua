@@ -183,9 +183,9 @@ local function CreateNode(self, x, y, z, status, force)
   local ly = y - self.offset[2]
   local lz = z - self.offset[3]
 
-  if x > 127 or x < -128
-    or y > 127 or y < -128
-    or z > 127 or z < -128 then
+  if lx > 127 or lx < -128
+    or ly > 127 or ly < -128
+    or lz > 127 or lz < -128 then
     error("Bad arguments: Number not within signed 1-byte range.", 3)
   end
   if not self.Map[lx] then
@@ -201,6 +201,7 @@ local function CreateNode(self, x, y, z, status, force)
       z = z,  -- Internal position for internal usage
       H = 0,  -- Distance to end node
       G = 0,  -- Distance to start node
+      TC = 0, -- Turn cost
       F = math.huge,  -- Combined values of H + G + P + TP
       P = 0,
       P2 = 0, -- Used internally to avoid pathfinding along edges.
@@ -220,6 +221,7 @@ local function CreateNode(self, x, y, z, status, force)
         z = z,  -- Internal position for internal usage
         H = 0,  -- Distance to end node
         G = 0,  -- Distance to start node
+        TC = 0, -- Turn cost
         F = math.huge,  -- Combined values of H + G + P + TP
         P = 0,
         P2 = 0, -- Used internally to avoid pathfinding along edges.
@@ -381,43 +383,15 @@ function MapObject:AddAir(x, y, z)
   return self
 end
 
-
+local deg, atan2, min, sqrt = math.deg, math.atan2, math.min, math.sqrt
 function MapObject:CalculateHCost(node, endNode)
   CheckSelf(self)
   expect(1, node   , "table")
   expect(2, endNode, "table")
 
-  -- Determine amount of movements required to get to the end node.
-  local cost = abs(node.y - endNode.y) -- start with Y movements, no turn cost.
-  if node.Facing then
-    local f = node.Facing
-    -- we need to face the direction we're closest to the "edge" of
-    -- or preferrably, if we're aligned properly already, go straight to
-    -- one of the edges even if it's farther than the closer
-    if (f == 0 and node.z <= endNode.z) or (f == 2 and node.z >= endNode.z) then -- positive/negative Z facing
-      -- all good on Z part, don't need a turn.
-
-      -- but lets check X axis
-      if node.x ~= endNode.x then
-        cost = cost + 1 -- node off on X axis, at least one turn needed.
-      end
-    elseif (f == 1 and node.x >= endNode.x) or (f == 3 and node.x <= endNode.x) then -- negative X facing
-      -- All good on X part, don't need a turn.
-
-      -- but lets check Z axis
-      if node.z ~= endNode.z then
-        cost = cost + 1
-      end
-    else
-      -- Not aligned properly to any axis, and not on any of the direct axis,
-      -- two turns required.
-      cost = cost + 2
-    end
-  end
-
-  -- add the amount of moves needed on x / z axis.
-  return cost + abs(node.x - endNode.x)
-         + abs(node.z - endNode.z)
+  return abs(node.x - endNode.x)
+       + abs(node.y - endNode.y)
+       + abs(node.z - endNode.z)
 end
 
 function MapObject:CalculateGCost(node, startNode)
@@ -428,43 +402,59 @@ function MapObject:CalculateGCost(node, startNode)
   return self:CalculateHCost(node, startNode)
 end
 
-function MapObject:CalculateFGHCost(node, startNode, endNode)
+function MapObject:MakeStarterNode(node, originFacing)
   CheckSelf(self)
-  expect(1, node     , "table")
-  expect(1, startNode, "table")
-  expect(1, endNode  , "table")
+  expect(1, node, "table")
+  expect(2, originFacing, "number")
 
-  local FCost = 0
+  node.F = 0
+  node.Facing = startFacing
+  node.Parent = {Facing = startFacing}
+end
 
+function MapObject:CalculateFGHCost(node, startNode, endNode, parentNode)
+  CheckSelf(self)
+  expect(1, node      , "table")
+  expect(2, startNode , "table")
+  expect(3, endNode   , "table")
+  expect(4, parentNode, "table")
+
+  -- @TODO Set this up so direction is actually handled better.
   -- Calculate if this node is facing a different direction than the parent node
-  if node.Parent then
-    -- Find ourself in parent's neighbors
-    for dir, _node in pairs(node.Parent.Neighbors) do
-      -- first node's facing will be nil,
-      -- thus incrementing cost of all first moves by 1.
-      -- though this shouldn't have consequences.
-      if _node == node and dir ~= node.Parent.Facing then
-        FCost = 1
-        if dir > 3 then
-          node.Facing = node.Parent.Facing
-        else
-          node.Facing = dir
-        end
-        break
-      elseif _node == node then
-        FCost = 0
-        node.Facing = node.Parent.Facing
-        break
+  -- Find ourself in parent's neighbors
+  local turnCost = 0
+  local found = false
+  for dir = 0, 5 do
+    local _node = parentNode.Neighbors[dir]
+    if _node == node then
+      found = true
+      if dir ~= parentNode.Facing then
+        node.TC = parentNode.TC + 1
+        turnCost = 1
+      else
+        node.TC = parentNode.TC
+        turnCost = 0
       end
+      if dir < 4 then
+        node.Facing = dir
+      else
+        node.Facing = parentNode.Facing
+      end
+      break
     end
+  end
+  if not found then
+    error("Attempt to calculate FGHcost of node which is not neighbor of inputted parent!", 2)
   end
 
   local HCost = self:CalculateHCost(node, endNode)
   local GCost = self:CalculateGCost(node, startNode)
-  FCost = FCost + HCost -- add H cost
+  local FCost = HCost -- add H cost
         + GCost -- add G cost
         + node.P -- Add penalty for unknown node.
         + node.P2 -- Add penalty for being on the edge of the map.
+        + turnCost -- Add turn-cost penalty
+        --+ parentNode.L + 0.1 -- add pathlength penalty
   --
 
   return FCost, GCost, HCost
