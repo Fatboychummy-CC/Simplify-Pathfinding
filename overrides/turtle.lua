@@ -1,3 +1,5 @@
+local expect = require "cc.expect".expect
+
 local old = {}
 local position = {0, 0, 0}
 local facing = 0
@@ -9,14 +11,14 @@ local offsets = {
 }
 
 local function AddOffsets()
-  return position[1] + offsets[facing][1]
-       + position[2] + offsets[facing][2]
-       + position[3] + offsets[facing][3]
+  return position[1] + offsets[facing][1],
+         position[2] + offsets[facing][2],
+         position[3] + offsets[facing][3]
 end
 local function SubOffsets()
-  return position[1] - offsets[facing][1]
-       + position[2] - offsets[facing][2]
-       + position[3] - offsets[facing][3]
+  return position[1] - offsets[facing][1],
+         position[2] - offsets[facing][2],
+         position[3] - offsets[facing][3]
 end
 local function AddUp()
   return position[1], position[2] + 1, position[3]
@@ -29,7 +31,7 @@ return function(pathfinderObj, override)
   if override then
     if not turtle._PATHFINDER_OVERRIDE then
       for k, v in pairs(turtle) do
-        if type(k) == "function" then
+        if type(v) == "function" then
           old[k] = v
         end
       end
@@ -52,7 +54,9 @@ return function(pathfinderObj, override)
         end
       end
 
+      -- Declare functions to be overridden.
       local overrides = {
+        -- [[ DEFAULT MOVEMENT FUNCTIONS ]]
         forward = function()
           local ok, err = old.forward()
           if ok then
@@ -133,12 +137,24 @@ return function(pathfinderObj, override)
             pathfinderObj:AddAir(AddUp())
           end
           return ok, err
-        end
+        end,
+        -- [[ NEW TURTLE FUNCTIONS ]]
+
+        -- This function attempts to locate the turtle using GPS
         locate = function()
+          -- Get first position
           local tPos = {gps.locate()}
 
-          if not tPos[1] then error("GPS failure.", 2) end
+          -- Never assume it just magically works.
+          if not tPos[1] then
+            return false, "GPS failure."
+          end
 
+          -- "Main loop" for turtle movement
+          -- Turtle will spin if block is in front
+          -- After full 360* turn, will go up a block.
+          -- Repeat above until block above, then turtle will go down instead of up.
+          -- Repeat all of above until air in front of turtle.
           local function moveLoop()
             local i = -1
             local ud = turtle.up
@@ -147,20 +163,34 @@ return function(pathfinderObj, override)
               i = i + 1
               if i % 4 == 0 and i ~= 0 then
                 if not ud() then
-                  ud = ud == turtle.up and turtle.down or turtle.up
+                  if ud == turtle.down then
+                    return false
+                  end
+                  ud = turtle.down
                   ud()
                 end
               end
             end
+
+            return true
           end
 
-          local determined = false
-          while not determined do
-            moveLoop()
+          while true do
+            -- Check if we're stuck in some kinda area
+            if not moveLoop() then
+              return false, "Stuck."
+            end
+
+            -- Not stuck, lets move forward!
             if turtle.forward() then
+              -- get second position after movement
               local tPos2 = {gps.locate()}
-              if not tPos2[1] then error("GPS failure.", 2) end
-              position = tPos2
+              if not tPos2[1] then
+                return false, "GPS failure."
+              end
+              position = tPos2 -- set current position
+
+              -- Determine facing based off of what direction we moved.
               if tPos2[1] > tPos[1] then
                 -- facing positive X
                 facing = 3
@@ -174,8 +204,80 @@ return function(pathfinderObj, override)
                 -- facing negative Z
                 facing = 2
               end
-              return
+              return true
             end
+          end
+        end,
+
+        -- This function will face the turtle in a specific direction.
+        -- 0 = +Z, 1 = -X, 2 = -Z, 3 = +X
+        face = function(direction)
+          expect(1, direction, "number")
+          if direction < 0 or direction > 3 or direction % 1 ~= 0 then
+            error("Bad argument #1: Expected integer in range 0-3", 2)
+          end
+
+          if facing == direction then return end
+
+          if (facing + 1) % 4 == direction then
+            turtle.turnRight()
+          else
+            while facing ~= direction do
+              turtle.turnLeft()
+            end
+          end
+        end,
+
+        -- Simple goto function that just attempts to move in a direction
+        simpleGoTo = function(x, y, z, canAttack, canDig)
+
+          -- This subfunction will attack and dig when movement fails, if allowed
+          -- if neither are allowed, will error.
+          local function ensure(movement, attack, dig)
+            local ok, err = movement()
+            if not ok then
+              if canAttack then
+                attack()
+              end
+              if canDig then
+                dig()
+              end
+              if not canAttack and not canDig then
+                error(string.format(
+                  "Failed to move, and is not allowed to attack or dig: %s",
+                  err
+                ), 3)
+              end
+            end
+          end
+
+          -- Align to X axis
+          while position[1] ~= x do
+            if position[1] > x then -- face -x
+              turtle.face(1)
+            else -- face +x
+              turtle.face(3)
+            end
+            ensure(turtle.forward, turtle.attack, turtle.dig)
+          end
+
+          -- Align to Y axis
+          while position[2] ~= y do
+            if position[2] > y then -- go down
+              ensure(turtle.down, turtle.attackDown, turtle.digDown)
+            else -- go up
+              ensure(turtle.up, turtle.attackUp, turtle.digUp)
+            end
+          end
+
+          -- Align to Z axis
+          while position[3] ~= z do
+            if position[3] > z then -- face -z
+              turtle.face(2)
+            else -- face +z
+              turtle.face(0)
+            end
+            ensure(turtle.forward, turtle.attack, turtle.dig)
           end
         end
       }
