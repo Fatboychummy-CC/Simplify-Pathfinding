@@ -94,7 +94,6 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
   local map = self.Map
   local beginNode = map:Get(x1, y1, z1)
   local endNode = map:Get(x2, y2, z2)
-  local fakeParentNode = {Facing = startFacing}
 
   local OPEN = {n = 0}
   local CLOSED = {n = 0}
@@ -200,9 +199,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
 
   Insert(OPEN, beginNode)
   PutBlock(debug, beginNode.x, beginNode.y, beginNode.z, "minecraft:white_stained_glass")
-  beginNode.F = 0
-  beginNode.Facing = startFacing
-  beginNode.Parent = fakeParentNode
+  map:MakeStarterNode(beginNode, startFacing)
 
   for i = 1, budget do
     local lowest = GetLowest(OPEN)
@@ -229,6 +226,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
           neighbor.F = f
           neighbor.G = g
           neighbor.H = h
+          --neighbor.L = current.L + 0.1
           neighbor.Parent = current
           if not IsIn(OPEN, neighbor) then
             PutBlock(debug, neighbor.x, neighbor.y, neighbor.z, "minecraft:white_stained_glass")
@@ -448,6 +446,7 @@ function index:ScanIntoMapUsing(object, range, offsetx, offsety, offsetz, callba
         -- Initialize every block in range as air.
         for x = -range, range do
           for y = -range, range do
+            yieldCheck()
             for z = -range, range do
               self:AddAir(x + offsetx, y + offsety, z + offsetz)
             end
