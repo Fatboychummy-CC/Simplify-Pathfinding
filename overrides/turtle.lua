@@ -54,6 +54,14 @@ return function(pathfinderObj, override)
         end
       end
 
+      local floor = math.floor
+      local function floorLocate()
+        local x, y, z = gps.locate()
+        if x then
+          return floor(x), floor(y), floor(z)
+        end
+      end
+
       -- Declare functions to be overridden.
       local overrides = {
         -- [[ DEFAULT MOVEMENT FUNCTIONS ]]
@@ -143,12 +151,14 @@ return function(pathfinderObj, override)
         -- This function attempts to locate the turtle using GPS
         locate = function()
           -- Get first position
-          local tPos = {gps.locate()}
+          local tPos = {floorLocate()}
 
           -- Never assume it just magically works.
           if not tPos[1] then
             return false, "GPS failure."
           end
+          pathfinderObj:SetMapOffset(tPos[1], tPos[2], tPos[3])
+          position = {tPos[1], tPos[2], tPos[3]}
 
           -- "Main loop" for turtle movement
           -- Turtle will spin if block is in front
@@ -184,7 +194,7 @@ return function(pathfinderObj, override)
             -- Not stuck, lets move forward!
             if turtle.forward() then
               -- get second position after movement
-              local tPos2 = {gps.locate()}
+              local tPos2 = {floorLocate()}
               if not tPos2[1] then
                 return false, "GPS failure."
               end
