@@ -227,16 +227,13 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
       local neighbors = map:GetNeighbors(current.x, current.y, current.z)
       for facing = 0, 5 do
         local neighbor = neighbors[facing]
-        local isClose = IsIn(CLOSED, neighbor)
-
-        if neighbor.S ~= 1 and not isClose then
-          local f, g, h = map:CalculateFGHCost(neighbor, beginNode, endNode, current)
+        if neighbor.S ~= 1 and not IsIn(CLOSED, neighbor) then
+          local f, g, h = map:CalculateFGHCost(neighbor, current, endNode)
           if f < neighbor.F then
             neighbor.F = f
             neighbor.G = g
             neighbor.H = h
-            --neighbor.L = current.L + 0.1
-            neighbor.Parent = current
+            map:SetParent(neighbor, current)
             if not IsIn(OPEN, neighbor) then
               PutBlock(debug, neighbor.x, neighbor.y, neighbor.z, "minecraft:white_stained_glass")
               Insert(OPEN, neighbor)

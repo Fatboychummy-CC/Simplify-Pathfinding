@@ -200,11 +200,8 @@ local function CreateNode(self, x, y, z, status, force)
       y = y,
       z = z,  -- Internal position for internal usage
       H = 0,  -- Distance to end node
-      G = 0,  -- Distance to start node
-      TC = 0, -- Turn cost
+      G = 0,  -- Cost from start node to this node.
       F = math.huge,  -- Combined values of H + G + P + TP
-      P = 0,
-      P2 = 0, -- Used internally to avoid pathfinding along edges.
       S = status or 0   -- Node state -- 0 = unknown, 1 = blocked, 2 = air
     }
     -- Edges of range will reject pathfinding.
@@ -220,11 +217,8 @@ local function CreateNode(self, x, y, z, status, force)
         y = y,
         z = z,  -- Internal position for internal usage
         H = 0,  -- Distance to end node
-        G = 0,  -- Distance to start node
-        TC = 0, -- Turn cost
+        G = 0,  -- Cost from start node to this node.
         F = math.huge,  -- Combined values of H + G + P + TP
-        P = 0,
-        P2 = 0, -- Used internally to avoid pathfinding along edges.
         S = status or 0   -- Node state -- 0 = unknown, 1 = blocked, 2 = air
       }
 
@@ -383,6 +377,43 @@ function MapObject:AddAir(x, y, z)
   return self
 end
 
+
+
+function MapObject:MakeStarterNode(node, originFacing)
+  CheckSelf(self)
+  expect(1, node, "table")
+  expect(2, originFacing, "number")
+
+  node.F = 0
+  node.Facing = startFacing
+  node.Parent = {Facing = startFacing, G = 0}
+end
+
+function MapObject:SetParent(node, parentNode)
+  CheckSelf(self)
+  expect(1, node, "table")
+  expect(2, parentNode, "table")
+
+  -- Determine turtle facing based on where parent was at
+  local found = false
+  local n = parentNode.Neighbors
+  for dir = 0, 3 do
+    if n[dir] == node then
+      n.ParentDir = dir
+      found = true
+      break
+    end
+  end
+
+  -- If the turtle moved up or down, the turtle's facing has not changed
+  -- Set facing of this node to same facing as parent is.
+  if not found then
+    node.ParentDir = parentNode.ParentDir
+  end
+
+  node.Parent = parentNode
+end
+
 local deg, atan2, min, sqrt = math.deg, math.atan2, math.min, math.sqrt
 function MapObject:CalculateHCost(node, endNode)
   CheckSelf(self)
@@ -394,70 +425,41 @@ function MapObject:CalculateHCost(node, endNode)
        + abs(node.z - endNode.z)
 end
 
-function MapObject:CalculateGCost(node, startNode)
-  CheckSelf(self)
-  expect(1, node     , "table")
-  expect(2, startNode, "table")
-
-  return self:CalculateHCost(node, startNode)
-end
-
-function MapObject:MakeStarterNode(node, originFacing)
+function MapObject:CalculateGCost(node, fromNeighbor)
   CheckSelf(self)
   expect(1, node, "table")
-  expect(2, originFacing, "number")
+  expect(2, fromNeighbor, "table")
 
-  node.F = 0
-  node.Facing = startFacing
-  node.Parent = {Facing = startFacing}
-end
+  local turn = 0
+  local unknown = 0
 
-function MapObject:CalculateFGHCost(node, startNode, endNode, parentNode)
-  CheckSelf(self)
-  expect(1, node      , "table")
-  expect(2, startNode , "table")
-  expect(3, endNode   , "table")
-  expect(4, parentNode, "table")
+  if node.S == 1 then -- unknown node
+    unknown = 10
+  end
 
-  -- @TODO Set this up so direction is actually handled better.
-  -- Calculate if this node is facing a different direction than the parent node
-  -- Find ourself in parent's neighbors
-  local turnCost = 0
-  local found = false
-  for dir = 0, 5 do
-    local _node = parentNode.Neighbors[dir]
-    if _node == node then
-      found = true
-      if dir ~= parentNode.Facing then
-        node.TC = parentNode.TC + 1
-        turnCost = 1
-      else
-        node.TC = parentNode.TC
-        turnCost = 0
+  -- determine if the turtle has turned.
+  for dir = 0, 3 do
+    if testNode == node then
+      if dir ~= fromNeighbor.ParentDir then
+        turn = 1
+        break
       end
-      if dir < 4 then
-        node.Facing = dir
-      else
-        node.Facing = parentNode.Facing
-      end
-      break
     end
   end
-  if not found then
-    error("Attempt to calculate FGHcost of node which is not neighbor of inputted parent!", 2)
-  end
+
+  return fromNeighbor.G + turn + unknown + 1
+end
+
+function MapObject:CalculateFGHCost(node, fromNeighbor, endNode)
+  CheckSelf(self)
+  expect(1, node, "table")
+  expect(2, fromNeighbor, "table")
+  expect(3, endNode, "table")
 
   local HCost = self:CalculateHCost(node, endNode)
-  local GCost = self:CalculateGCost(node, startNode)
-  local FCost = HCost -- add H cost
-        + GCost -- add G cost
-        + node.P -- Add penalty for unknown node.
-        + node.P2 -- Add penalty for being on the edge of the map.
-        + turnCost -- Add turn-cost penalty
-        --+ parentNode.L + 0.1 -- add pathlength penalty
-  --
+  local GCost = self:CalculateGCost(node, fromNeighbor)
 
-  return FCost, GCost, HCost
+  return GCost + HCost, GCost, HCost
 end
 
 --- This function loads a map from a file, it determines the mode required while loading.
