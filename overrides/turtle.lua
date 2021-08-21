@@ -251,11 +251,21 @@ return function(pathfinderObj, override)
           local function ensure(movement, attack, dig)
             local ok, err = movement()
             if not ok then
+              if movement == turtle.back then
+                turtle.turnRight()
+                turtle.turnRight()
+              end
+
               if canAttack then
                 attack()
               end
               if canDig then
                 dig()
+              end
+
+              if movement == turtle.back then
+                turtle.turnRight()
+                turtle.turnRight()
               end
               if not canAttack and not canDig then
                 error(string.format(
@@ -268,12 +278,21 @@ return function(pathfinderObj, override)
 
           -- Align to X axis
           while position[1] ~= x do
+            local d = turtle.forward
             if position[1] > x then -- face -x
-              turtle.face(1)
+              if facing ~= 3 then
+                turtle.face(1)
+              else
+                d = turtle.back
+              end
             else -- face +x
-              turtle.face(3)
+              if facing ~= 1 then
+                turtle.face(3)
+              else
+                d = turtle.back
+              end
             end
-            ensure(turtle.forward, turtle.attack, turtle.dig)
+            ensure(d, turtle.attack, turtle.dig)
           end
 
           -- Align to Y axis
@@ -287,12 +306,21 @@ return function(pathfinderObj, override)
 
           -- Align to Z axis
           while position[3] ~= z do
+            local d = turtle.forward
             if position[3] > z then -- face -z
-              turtle.face(2)
+              if facing ~= 0 then
+                turtle.face(2)
+              else
+                d = turtle.back
+              end
             else -- face +z
-              turtle.face(0)
+              if facing ~= 2 then
+                turtle.face(0)
+              else
+                d = turtle.back
+              end
             end
-            ensure(turtle.forward, turtle.attack, turtle.dig)
+            ensure(d, turtle.attack, turtle.dig)
           end
         end,
 
