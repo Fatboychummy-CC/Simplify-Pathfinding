@@ -56,7 +56,7 @@ local function PutBlock(enable, x, y, z, name, clearing)
       )
     )
     asyncCount = asyncCount + 1
-    if asyncCount >= (clearing and 100 or 10) then
+    if asyncCount >= (clearing and 50 or 10) then
       asyncCount = 0
       os.sleep()
     end
