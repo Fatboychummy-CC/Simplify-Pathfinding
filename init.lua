@@ -196,10 +196,6 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
 
     path.n = #path
 
-    CleanNodes(CLOSED)
-    CleanNodes(OPEN)
-    CleanPlacements(debug)
-
     return path
   end
 
@@ -247,10 +243,12 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
   end
 
   local ok, val1, val2 = pcall(main)
+
+  CleanNodes(CLOSED)
+  CleanNodes(OPEN)
+  CleanPlacements(debug)
+
   if not ok then
-    CleanNodes(CLOSED)
-    CleanNodes(OPEN)
-    CleanPlacements(debug)
     return false, val1
   end
   return val1, val2
