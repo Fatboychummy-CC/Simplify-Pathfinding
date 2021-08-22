@@ -239,12 +239,13 @@ return function(pathfinderObj, override)
         end,
 
         -- Simple goto function that just attempts to move in a direction
-        simpleGoTo = function(x, y, z, canAttack, canDig)
+        simpleGoTo = function(x, y, z, canAttack, canDig, forceForward)
           expect(1, x, "number")
           expect(2, y, "number")
           expect(3, z, "number")
-          expect(4, canAttack, "boolean", "nil")
-          expect(5, canDig   , "boolean", "nil")
+          expect(4, canAttack   , "boolean", "nil")
+          expect(5, canDig      , "boolean", "nil")
+          expect(6, forceForward, "boolean", "nil")
 
           -- This subfunction will attack and dig when movement fails, if allowed
           -- if neither are allowed, will error.
@@ -280,13 +281,13 @@ return function(pathfinderObj, override)
           while position[1] ~= x do
             local d = turtle.forward
             if position[1] > x then -- face -x
-              if facing ~= 3 then
+              if forceForward or facing ~= 3 then
                 turtle.face(1)
               else
                 d = turtle.back
               end
             else -- face +x
-              if facing ~= 1 then
+              if forceForward or facing ~= 1 then
                 turtle.face(3)
               else
                 d = turtle.back
@@ -308,13 +309,13 @@ return function(pathfinderObj, override)
           while position[3] ~= z do
             local d = turtle.forward
             if position[3] > z then -- face -z
-              if facing ~= 0 then
+              if forceForward or facing ~= 0 then
                 turtle.face(2)
               else
                 d = turtle.back
               end
             else -- face +z
-              if facing ~= 2 then
+              if forceForward or facing ~= 2 then
                 turtle.face(0)
               else
                 d = turtle.back
@@ -325,13 +326,14 @@ return function(pathfinderObj, override)
         end,
 
         -- Function that follows a path from pathfinder
-        followPath = function(path, canAttack, canDig)
+        followPath = function(path, canAttack, canDig, forceForward)
           expect(1, path, "table")
-          expect(2, canAttack, "boolean", "nil")
-          expect(3, canDig, "boolean", "nil")
+          expect(2, canAttack   , "boolean", "nil")
+          expect(3, canDig      , "boolean", "nil")
+          expect(4, forceForward, "boolean", "nil")
 
           for i = 1, #path do
-            turtle.simpleGoTo(path[i].X, path[i].Y, path[i].Z, canAttack, canDig)
+            turtle.simpleGoTo(path[i].X, path[i].Y, path[i].Z, canAttack, canDig, forceForward)
           end
         end,
         getPosition = function()
