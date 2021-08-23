@@ -40,7 +40,10 @@ function extras.Scanners.geoScanner(periphName, map, range, offsetx, offsety, of
     end
   end
 
-  return scan, err
+  local ok = (not scan) and true or false
+  local value = err and err or scan
+
+  return ok, value
 end
 
 
@@ -75,6 +78,7 @@ function index:Scan(range, offsetx, offsety, offsetz)
   expect(2, offsetx, "number", "nil")
   expect(3, offsety, "number", "nil")
   expect(4, offsetz, "number", "nil")
+  range = range or 8
 
   for periphType in pairs(extras.Scanners) do
     local p = peripheral.find(periphType)
