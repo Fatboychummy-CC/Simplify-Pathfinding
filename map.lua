@@ -4,7 +4,9 @@
 -- @module map
 
 local expect = require "cc.expect".expect
-local abs = math.abs
+
+-- set math functions as local
+local abs, deg, atan2, min, sqrt = math.abs, math.deg, math.atan2, math.min, math.sqrt
 
 local map = {}
 local mapmt = {__index = {}}
@@ -153,7 +155,9 @@ local directions = {
   { 0, 0, 1, 0 }, -- positive Z
   { 0, 0,-1, 2 }  -- negative Z
 }
-function MapObject:GetNeighbors(x, y, z)
+
+---
+function MapObject:GetNeighbors(node)
   CheckSelf(self)
   expect(1, x, "number")
   expect(2, y, "number")
@@ -178,6 +182,7 @@ function MapObject:GetNeighbors(x, y, z)
   return node.Neighbors
 end
 
+---
 local function CreateNode(self, x, y, z, status, force)
   local lx = x - self.offset[1]
   local ly = y - self.offset[2]
@@ -305,8 +310,7 @@ function MapObject:AddAir(x, y, z)
   return self
 end
 
-
-
+---
 function MapObject:MakeStarterNode(node, originFacing)
   CheckSelf(self)
   expect(1, node, "table")
@@ -317,6 +321,7 @@ function MapObject:MakeStarterNode(node, originFacing)
   node.Parent = {Facing = startFacing, G = 0}
 end
 
+---
 function MapObject:SetParent(node, parentNode)
   CheckSelf(self)
   expect(1, node, "table")
@@ -342,7 +347,7 @@ function MapObject:SetParent(node, parentNode)
   node.Parent = parentNode
 end
 
-local deg, atan2, min, sqrt = math.deg, math.atan2, math.min, math.sqrt
+---
 function MapObject:CalculateHCost(node, endNode)
   CheckSelf(self)
   expect(1, node   , "table")
@@ -353,6 +358,7 @@ function MapObject:CalculateHCost(node, endNode)
        + abs(node.z - endNode.z)
 end
 
+---
 function MapObject:CalculateGCost(node, fromNeighbor)
   CheckSelf(self)
   expect(1, node, "table")
@@ -378,6 +384,7 @@ function MapObject:CalculateGCost(node, fromNeighbor)
   return fromNeighbor.G + turn + unknown + 1
 end
 
+---
 function MapObject:CalculateFGHCost(node, fromNeighbor, endNode)
   CheckSelf(self)
   expect(1, node, "table")
