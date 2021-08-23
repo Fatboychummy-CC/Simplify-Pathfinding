@@ -2,6 +2,8 @@
 -- @module A*
 -- @alias a
 
+-- @TODO Once I'm settled, get Illuaminate running so I can actually generate docs (and confirm that the docs stuff I have actually works)
+
 local prefix, pathToSelf = ...
 if prefix:match("%.init$") then
   prefix = prefix:sub(1, -5) -- require "Pathfinder.init" for whatever reason
@@ -77,6 +79,14 @@ local function CleanPlacements(enable)
 end
 
 --- Pathfind from a given point, to a given point.
+-- @tparam number x1 The X position of the start point.
+-- @tparam number y1 The Y position of the start point.
+-- @tparam number z1 The Z position of the start point.
+-- @tparam number x2 The X position of the end point.
+-- @tparam number y2 The Y position of the end point.
+-- @tparam number z2 The Z position of the end point.
+-- @tparam number? startFacing The way the first node is facing. Pathfinding will have slight priority in this direction.
+-- @treturn boolean,table|string First value is if a valid path was found, second value is the path or a string error explaining what went wrong.
 function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing)
   CheckSelf(self)
   expect(1, x1, "number")
@@ -249,6 +259,7 @@ mt.__call = index.Pathfind -- Allow use of Pathfinder() as well as Pathfinder:Pa
 --- Loads a map from a file.
 -- @tparam string filename the absolute path to the file.
 -- @tparam function? callback The callback to be used for loading.
+-- @treturn PathfinderObject Self.
 function index:LoadMap(filename, callback)
   CheckSelf(self)
   expect(1, filename, "string")
@@ -263,6 +274,8 @@ function index:LoadMap(filename, callback)
   return self
 end
 
+--- Gets the map object. Can also be grabbed via PathfinderObject.Map.
+-- @treturn table The MapObject associated with this PathfinderObject.
 function index:GetMap()
   CheckSelf(self)
 
@@ -270,13 +283,11 @@ function index:GetMap()
 end
 
 
---- The below three functions are all passthroughs to MapObject:Add___
+--- Passthrough
 -- @see MapObject:AddObstacle
 -- @tparam number x The x position to put the node.
 -- @tparam number y The y position to put the node.
 -- @tparam number z The z position to put the node.
--- @see Pathfinder:AddUnknown
--- @see Pathfinder:AddAir
 function index:AddObstacle(x, y, z)
   CheckSelf(self)
   expect(1, x, "number")
@@ -293,7 +304,6 @@ end
 -- @tparam number x The x position to put the node.
 -- @tparam number y The y position to put the node.
 -- @tparam number z The z position to put the node.
--- @see Pathfinder:AddObstacle
 function index:AddUnknown(x, y, z)
   CheckSelf(self)
   expect(1, x, "number")
@@ -310,7 +320,6 @@ end
 -- @tparam number x The x position to put the node.
 -- @tparam number y The y position to put the node.
 -- @tparam number z The z position to put the node.
--- @see Pathfinder:AddObstacle
 function index:AddAir(x, y, z)
   CheckSelf(self)
   expect(1, x, "number")
@@ -324,6 +333,10 @@ end
 
 --- Sets the map's internal offset.
 -- When getting node information, this offset is subtracted from the input.
+-- @tparam number x The X offset.
+-- @tparam number y The Y offset.
+-- @tparam number z The Z offset.
+-- @treturn PathfinderObject Self.
 function index:SetMapOffset(x, y, z)
   CheckSelf(self)
   expect(1, x, "number")
@@ -337,6 +350,12 @@ function index:SetMapOffset(x, y, z)
   return self
 end
 
+--- Creates a new PathfinderObject.
+-- @tparam string name The name of this pathfinder (forwarded to the map).
+-- @tparam number? offsetx The offset on the X axis.
+-- @tparam number? offsety The offset on the Y axis.
+-- @tparam number? offsetz The offset on the Z axis.
+-- @treturn PathfinderObject The newly created object.
 function a.New(name, offsetx, offsety, offsetz)
   return setmetatable(
     {
