@@ -4,17 +4,20 @@
 -- @module map
 
 local expect = require "cc.expect".expect
-local abs = math.abs
 
-local map = {}
+-- set math functions as local
+local abs, deg, atan2, min, sqrt = math.abs, math.deg, math.atan2, math.min, math.sqrt
+
+local map = {YieldTime = 3000}
 local mapmt = {__index = {}}
 local MapObject = mapmt.__index
-local endTime = os.epoch("utc") + 3000
+local endTime = os.epoch("utc") + map.YieldTime
 local function yieldCheck()
   if endTime < os.epoch("utc") then
-    endTime = os.epoch("utc") + 3000
+    endTime = os.epoch("utc") + map.YieldTime
     os.queueEvent("pathfinder_dummy_event")
     os.pullEvent("pathfinder_dummy_event")
+    return true
   end
 end
 
@@ -38,15 +41,15 @@ function MapObject:Serialize(mode, callback)
   expect(2, callback, "function", "nil")
   callback = callback or function() end
 
-  if name and #name > 256 then
+  if self.Name and #self.Name > 256 then
     error("Name is too long! (Maximum 256 chars)", 2)
   end
 
-  self.status.percent = 0
-  self.status.state = "serialize"
-  callback(self.status.state, self.status.percent, self.name)
+  local percent = 0
+  local state = "serialize"
+  callback(state, percent, self.Name)
 
-  local max = self.loadedNodes
+  local max = 0
 
   if mode then
     local output = {}
@@ -71,16 +74,16 @@ function MapObject:Serialize(mode, callback)
     data[n] = d
   end
 
-  Add(string.pack("<i1", #self.name))     -- name length
-  Add(self.name)                          -- name
-  Add(string.pack("<i3", self.offset[1])) -- offset x
-  Add(string.pack("<i3", self.offset[2])) -- offset y
-  Add(string.pack("<i3", self.offset[3])) -- offset z
+  Add(string.pack("<i1", #self.Name))     -- name length
+  Add(self.Name)                          -- name
+  Add(string.pack("<i3", self.Offset[1])) -- offset x
+  Add(string.pack("<i3", self.Offset[2])) -- offset y
+  Add(string.pack("<i3", self.Offset[3])) -- offset z
 
   for xIndex, YList in pairs(self.Map) do
     for yIndex, ZList in pairs(YList) do
-      self.status.percent = count / max
-      callback(self.status.state, self.status.percent, self.name)
+      percent = count / max
+      callback(state, percent, self.Name)
 
       local runsRemain = true
       local seen = {}
@@ -131,16 +134,14 @@ function MapObject:Serialize(mode, callback)
   -- Save each node run.
   for i = 1, runN do
     local run = noderuns[i]
-    Add(string.pack("<i1", run[1].x - self.offset[1])) -- run x
-    Add(string.pack("<i1", run[1].y - self.offset[2])) -- run y
-    Add(string.pack("<i1", run[1].z - self.offset[3])) -- run z
-    Add(string.pack("<i1", run[2].z - self.offset[3])) -- run end z
+    Add(string.pack("<i1", run[1].x - self.Offset[1])) -- run x
+    Add(string.pack("<i1", run[1].y - self.Offset[2])) -- run y
+    Add(string.pack("<i1", run[1].z - self.Offset[3])) -- run z
+    Add(string.pack("<i1", run[2].z - self.Offset[3])) -- run end z
     Add(string.pack("<i1", run[1].S)) -- run state
   end
 
-  self.status.percent = 1
-  self.status.state = "serialize-complete"
-  callback(self.status.state, self.status.percent, self.name)
+  callback("serialize-complete", percent, self.Name)
 
   return data
 end
@@ -153,35 +154,37 @@ local directions = {
   { 0, 0, 1, 0 }, -- positive Z
   { 0, 0,-1, 2 }  -- negative Z
 }
-function MapObject:GetNeighbors(x, y, z)
+
+--- This method will populate a node's neighbors (if they haven't been populated already).
+-- Directions 0-3 are along x/z axis, 4 and 5 are y axis.
+-- @tparam Node node The node to populate.
+-- @treturn {Node, Node, Node, Node, Node, Node} The neighbors of the node.
+function MapObject:GetNeighbors(node)
   CheckSelf(self)
-  expect(1, x, "number")
-  expect(2, y, "number")
-  expect(3, z, "number")
+  expect(1, node, "table")
 
-  -- Offsets do not need to be calculated here
-  -- using self:Get does that implicitly.
 
-  local map = self.Map
+  if not node.Neighbors or #node.Neighbors < 6 then
+    local x, y, z = node.x, node.y, node.z
+    node.Neighbors = {}
+    for i = 1, 6 do
+      local _x, _y, _z, dirname = table.unpack(directions[i], 1, 4)
+      _x = _x + x
+      _y = _y + y
+      _z = _z + z
 
-  local node = self:Get(x, y, z)
-  node.Neighbors = {}
-  for i = 1, 6 do
-    local _x, _y, _z, dirname = table.unpack(directions[i], 1, 4)
-    _x = _x + x
-    _y = _y + y
-    _z = _z + z
-
-    node.Neighbors[dirname] = self:Get(_x, _y, _z) -- add neighbor to node
+      node.Neighbors[dirname] = self:Get(_x, _y, _z) -- add neighbor to node
+    end
   end
 
   return node.Neighbors
 end
 
+---
 local function CreateNode(self, x, y, z, status, force)
-  local lx = x - self.offset[1]
-  local ly = y - self.offset[2]
-  local lz = z - self.offset[3]
+  local lx = x - self.Offset[1]
+  local ly = y - self.Offset[2]
+  local lz = z - self.Offset[3]
 
   if lx > 127 or lx < -128
     or ly > 127 or ly < -128
@@ -228,7 +231,6 @@ local function CreateNode(self, x, y, z, status, force)
         or lz == 127 or lz == -128 then
         self.Map[lx][ly][lz].P2 = math.huge
       end
-      self.loadedNodes = self.loadedNodes + 1
     end
   end
 
@@ -249,82 +251,11 @@ function MapObject:Get(x, y, z)
   return CreateNode(self, x, y, z)
 end
 
---- This function resizes the map object.
--- This function will delete all map data when called, be warned!
--- @tparam number minx The minimum x position.
--- @tparam number miny The minimum y position.
--- @tparam number minz The minimum z position.
--- @tparam number maxx The maximum x position.
--- @tparam number maxy The maximum y position.
--- @tparam number maxz The maximum z position.
--- @tparam number state the state of all nodes to be pregenned. Defaults to "unknown" state.
--- @tparam function callback The callback to be run while generating.
-function MapObject:Pregen(minx, miny, minz, maxx, maxy, maxz, state, callback)
+--- This function will generate nodes inside of a boundary
+-- It should make subsequent accesses faster.
+function MapObject:Pregen()
   CheckSelf(self)
-  expect(1, minx, "number")
-  expect(2, miny, "number")
-  expect(3, minz, "number")
-  expect(4, maxx, "number")
-  expect(5, maxy, "number")
-  expect(6, maxz, "number")
-  expect(7, state, "number", "nil")
-  expect(8, callback, "function", "nil")
-  callback = callback or function() end
-  state = state or 0
-
-  -- ensure all numbers are in range
-  local ns = {minx, miny, minz, maxx, maxy, maxz}
-  for i = 1, 6 do
-    if not pcall(string.pack, "<i1", ns[i]) then
-      error(string.format("Bad argument #%d: Expected number in signed 1-byte range.", i), 2)
-    end
-  end
-
-  self.status.state = "resize"
-  self.status.percent = 0
-  callback(self.status.state, self.status.percent, self.name)
-
-  self.Map = {}
-  local map = self.Map
-  local max1 = maxx * maxy * maxz
-  local max2 = minx * miny * minz
-  local max = max2 > 0 or max1 < 0 and max1 - max2
-           or max1 + abs(max2)
-  local count = 0
-
-  if max == 0 then
-    self.Map = {}
-    self.status.percent = 1
-    self.status.state = "resize-complete"
-    callback(self.status.state, self.status.percent, self.name)
-    return self
-  end
-
-  for x = minx, maxx do
-    map[x] = {}
-    local X = map[x]
-
-    for y = miny, maxy do
-      X[y] = {}
-      local Y = X[y]
-      self.status.percent = count / max
-      callback(self.status.state, self.status.percent, self.name)
-
-      for z = minz, maxz do
-        yieldCheck()
-        count = count + 1
-        CreateNode(self, x, y, z, state)
-      end
-    end
-  end
-
-  self.status.percent = 1
-  self.status.state = "resize-complete"
-  callback(self.status.state, self.status.percent, self.name)
-
-  return self
 end
-MapObject.REESize = MapObject.Resize
 
 --- This function adds an obstacle to the map.
 -- When pathfinding with obstacles, the pathfinder will completely avoid these.
@@ -377,8 +308,10 @@ function MapObject:AddAir(x, y, z)
   return self
 end
 
-
-
+--- Sets some data in a node to turn it into an origin node.
+-- It creates a fake node to act as the parent, so pathfinding can occur in all directions, but preferrably in the direction we started.
+-- @tparam Node node The node to convert.
+-- @tparam number originFacing The facing of the origin node.
 function MapObject:MakeStarterNode(node, originFacing)
   CheckSelf(self)
   expect(1, node, "table")
@@ -386,9 +319,25 @@ function MapObject:MakeStarterNode(node, originFacing)
 
   node.F = 0
   node.Facing = startFacing
-  node.Parent = {Facing = startFacing, G = 0}
+  local fakeNode = {Neighbors = {}, Facing = startFacing, G = 0}
+  fakeNode.Neighbors[(originFacing + 2) % 4] = node
+
+  self:SetParent(node, fakeNode)
 end
 
+--- Clears extra node data of starter node.
+-- @tparam Node node The node to clear.
+function MapObject:ClearStarterNode(node)
+  node.F = math.huge
+  node.Facing = nil
+  node.ParentDir = nil
+  node.Parent = nil
+end
+
+--- Set the parent of a node to another node.
+-- This function also handles directions, to be used while calculating G-cost (if OptimizeTurns is enabled).
+-- @tparam Node node The child node.
+-- @tparam Node parentNode The parent node.
 function MapObject:SetParent(node, parentNode)
   CheckSelf(self)
   expect(1, node, "table")
@@ -414,17 +363,27 @@ function MapObject:SetParent(node, parentNode)
   node.Parent = parentNode
 end
 
-local deg, atan2, min, sqrt = math.deg, math.atan2, math.min, math.sqrt
+--- Calculate the H-cost of input node.
+-- [H]euristic cost is the "Estimated cost to the end node, from input node."
+-- @tparam Node node The node to be calculated.
+-- @tparam Node endNode The target location's node.
+-- @treturn number The H-cost of this node.
 function MapObject:CalculateHCost(node, endNode)
   CheckSelf(self)
   expect(1, node   , "table")
   expect(2, endNode, "table")
 
-  return abs(node.x - endNode.x)
+  return (abs(node.x - endNode.x)
        + abs(node.y - endNode.y)
-       + abs(node.z - endNode.z)
+       + abs(node.z - endNode.z))
+       * self.HFavor
 end
 
+--- Calculate the G-cost of input node.
+-- G cost is the "Actual cost of moving to this node, from the beginning."
+-- @tparam Node node The node to be calculated.
+-- @tparam Node fromNeighbor The node that would act as a "parent" node to the node being calculated.
+-- @treturn number The G-cost of arriving at this node.
 function MapObject:CalculateGCost(node, fromNeighbor)
   CheckSelf(self)
   expect(1, node, "table")
@@ -438,18 +397,26 @@ function MapObject:CalculateGCost(node, fromNeighbor)
   end
 
   -- determine if the turtle has turned.
-  for dir = 0, 3 do
-    if testNode == node then
-      if dir ~= fromNeighbor.ParentDir then
-        turn = 1
-        break
+  if self.OptimizeTurns then
+    for dir = 0, 3 do
+      if testNode == node then
+        if dir ~= fromNeighbor.ParentDir then
+          turn = 1
+          break
+        end
       end
     end
   end
 
-  return fromNeighbor.G + turn + unknown + 1
+  return (fromNeighbor.G + turn + unknown + 1) * self.GFavor
 end
 
+--- Calculate F cost of a node.
+-- This also calculates (and returns) G and H cost, since F cost is simply G + H.
+-- @tparam Node node The node to calculate.
+-- @tparam Node fromNeighbor The node that would act as a "parent" node to the node being calculated.
+-- @tparam Node endNode The target node.
+-- @treturn number,number,number F-cost, G-cost, H-cost
 function MapObject:CalculateFGHCost(node, fromNeighbor, endNode)
   CheckSelf(self)
   expect(1, node, "table")
@@ -464,6 +431,7 @@ end
 
 --- This function loads a map from a file, it determines the mode required while loading.
 -- Does not yet support overflow files.
+-- Read specs/SaveSpec.md to understand this.
 -- @tparam string filename The name of the file to be loaded.
 -- @tparam function callback The callback to be called during stages of loading.
 -- @treturn mapobject
@@ -491,13 +459,12 @@ function map.FromFile(filename, callback)
     end
 
     local namelen = readNumber(1)
-    data.name = h:read(namelen)
+    data.Name = h:read(namelen)
 
-    data.offset = {readNumber(3), readNumber(3), readNumber(3)}
+    data.Offset = {readNumber(3), readNumber(3), readNumber(3)}
 
     local numNodeRuns = readNumber(4)
 
-    data.loadedNodes = 0
     for i = 1, numNodeRuns do
       local nodeX, nodeY, nodeZ, nodeEnd, nodeState = readNumber(1), readNumber(1), readNumber(1), readNumber(1), readNumber(1)
 
@@ -507,8 +474,9 @@ function map.FromFile(filename, callback)
       end
 
       local len = nodeZ - nodeEnd
-      data.loadedNodes = data.loadedNodes + len
 
+      -- Only node types saved are air and obstacle, no need for unknowns.
+      -- Everything is unknown by default
       if nodeState == 2 then
         for z = nodeZ, nodeEnd do
           data:AddAir(nodeX, modeY, z)
@@ -529,16 +497,15 @@ function map.FromFile(filename, callback)
     error("Failed to read file:\n" .. err, 2)
   end
 
-  data.status = {
-    state = "new",
-    percent = 0
-  }
-
   return data
 end
 
 --- Creates a new, blank map.
--- @treturn mapobject
+-- @tparam string name The name of this map.
+-- @tparam number? offsetX The offset in X axis.
+-- @tparam number? offsetY The offset in Y axis.
+-- @tparam number? offsetZ The offset in Z axis.
+-- @treturn MapObject
 function map.New(name, offsetX, offsetY, offsetZ)
   expect(1, name, "string", "nil")
   if name and #name > 256 then
@@ -555,13 +522,11 @@ function map.New(name, offsetX, offsetY, offsetZ)
     {
       _ISMAP = true,
       Map = {},
-      loadedNodes = 0,
-      status = {
-        state = "new",
-        percent = 0
-      },
-      offset = {offsetX, offsetY, offsetZ},
-      name = name or "Untitled"
+      Offset = {offsetX, offsetY, offsetZ},
+      GFavor = 1,
+      HFavor = 1,
+      OptimizeTurns = true,
+      Name = name or "Untitled"
     },
     mapmt
   )

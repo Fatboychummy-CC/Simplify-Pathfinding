@@ -13,6 +13,18 @@
     {
       remote = "https://raw.githubusercontent.com/Fatboychummy-CC/SimplifyPathfinding/master/map.lua",
       location = "Pathfinder/map.lua"
-    }
+    },
+    {
+      remote = "https://raw.githubusercontent.com/Fatboychummy-CC/SimplifyPathfinding/master/MapExtras.lua",
+      location = "Pathfinder/Util/MapExtras.lua"
+    },
+    {
+      remote = "https://raw.githubusercontent.com/Fatboychummy-CC/SimplifyPathfinding/master/Util/PathfinderExtras.lua",
+      location = "Pathfinder/Util/PathfinderExtras.lua"
+    },
+    {
+      remote = "https://raw.githubusercontent.com/Fatboychummy-CC/SimplifyPathfinding/master/Util/Turtle.lua",
+      location = "Pathfinder/Util/Turtle.lua"
+    },
   }
 }

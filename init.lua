@@ -2,24 +2,15 @@
 -- @module A*
 -- @alias a
 
+-- @TODO Once I'm settled, get Illuaminate running so I can actually generate docs (and confirm that the docs stuff I have actually works)
+
 local prefix, pathToSelf = ...
-
--- Alter the package path so all submodules can require as needed.
-local dir = "/" .. fs.getDir(pathToSelf)
-local addon = string.format(";/%s/?.lua;/%s/?/init.lua", dir, dir)
-if not string.find(package.path, addon, nil, 1) then
-  package.path = package.path .. addon
+if prefix:match("%.init$") then
+  prefix = prefix:sub(1, -5) -- require "Pathfinder.init" for whatever reason
+else
+  prefix = prefix .. "." -- require "Pathfinder"
 end
-
--- Yield function to yield when needed.
-local endTime = os.epoch("utc") + 3000
-local function yieldCheck()
-  if endTime < os.epoch("utc") then
-    endTime = os.epoch("utc") + 3000
-    os.queueEvent("pathfinder_dummy_event")
-    os.pullEvent("pathfinder_dummy_event")
-  end
-end
+-- prefix is now "Path.To.Pathfinder."
 
 local ok, expect = pcall(require, "cc.expect")
 if ok then
@@ -28,11 +19,26 @@ else
   error("This module will only work on CC:Tweaked for minecraft 1.12.2+")
 end
 
-local map = require("map")
+-- Combine prefix to library.
+local function Combine(lib)
+  return prefix .. lib
+end
 
-local a = {}
+local map = require(Combine "Map")
+
+local a = {YieldTime = 3000}
 local mt = {__index = {}}
 local index = mt.__index
+
+-- Yield function to yield when needed.
+local endTime = os.epoch("utc") + a.YieldTime
+local function yieldCheck()
+  if endTime < os.epoch("utc") then
+    endTime = os.epoch("utc") + a.YieldTime
+    os.queueEvent("pathfinder_dummy_event")
+    os.pullEvent("pathfinder_dummy_event")
+  end
+end
 
 local function CheckSelf(self)
   if type(self) ~= "table" or not self._ISPATHFINDER then
@@ -73,19 +79,15 @@ local function CleanPlacements(enable)
 end
 
 --- Pathfind from a given point, to a given point.
--- Facings are: 0 = +z, 1 = -x, 2 = -z, 3 = +x
--- @tparam number x1 The first point position.
--- @tparam number y1 The first point position.
--- @tparam number z1 The first point position.
--- @tparam number x2 The second point position.
--- @tparam number y2 The second point position.
--- @tparam number z2 The second point position.
--- @tparam number startFacing The facing the turtle begins as.
--- @tparam number budget The loop budget to run with. If budget iterations have run, pathfinding will abort. Defaults to 10000.
--- @tparam boolean debug If true, draws path as it is being calculated. Slows significantly due to setblock ratelimits.
--- @treturn boolean If a valid path was found.
--- @treturn table? The path that was found.
-function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
+-- @tparam number x1 The X position of the start point.
+-- @tparam number y1 The Y position of the start point.
+-- @tparam number z1 The Z position of the start point.
+-- @tparam number x2 The X position of the end point.
+-- @tparam number y2 The Y position of the end point.
+-- @tparam number z2 The Z position of the end point.
+-- @tparam number? startFacing The way the first node is facing. Pathfinding will have slight priority in this direction.
+-- @treturn boolean,table|string First value is if a valid path was found, second value is the path or a string error explaining what went wrong.
+function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing)
   CheckSelf(self)
   expect(1, x1, "number")
   expect(2, y1, "number")
@@ -94,8 +96,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
   expect(5, y2, "number")
   expect(6, z2, "number")
   expect(7, startFacing, "number")
-  expect(8, budget, "number", "nil")
-  budget = budget or 10000
+  startFacing = startFacing or 0
 
   local map = self.Map
   local beginNode = map:Get(x1, y1, z1)
@@ -201,10 +202,10 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
 
   local function main()
     Insert(OPEN, beginNode)
-    PutBlock(debug, beginNode.x, beginNode.y, beginNode.z, "minecraft:white_stained_glass")
+    PutBlock(self.Debug.PlaceBlocks, beginNode.x, beginNode.y, beginNode.z, "minecraft:white_stained_glass")
     map:MakeStarterNode(beginNode, startFacing)
 
-    for i = 1, budget do
+    for i = 1, self.Budget do
       local lowest = GetLowest(OPEN)
       if not lowest then
         return false, "All available nodes traversed, no path found."
@@ -214,13 +215,13 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
 
       local current = Remove(OPEN, lowest)
       Insert(CLOSED, current)
-      PutBlock(debug, current.x, current.y, current.z, "minecraft:black_stained_glass")
+      PutBlock(self.Debug.PlaceBlocks, current.x, current.y, current.z, "minecraft:black_stained_glass")
 
       if current == endNode then
         return true, GetPath(endNode)
       end
 
-      local neighbors = map:GetNeighbors(current.x, current.y, current.z)
+      local neighbors = map:GetNeighbors(current)
       for facing = 0, 5 do
         local neighbor = neighbors[facing]
         if neighbor.S ~= 1 and not IsIn(CLOSED, neighbor) then
@@ -231,7 +232,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
             neighbor.H = h
             map:SetParent(neighbor, current)
             if not IsIn(OPEN, neighbor) then
-              PutBlock(debug, neighbor.x, neighbor.y, neighbor.z, "minecraft:white_stained_glass")
+              PutBlock(self.Debug.PlaceBlocks, neighbor.x, neighbor.y, neighbor.z, "minecraft:white_stained_glass")
               Insert(OPEN, neighbor)
             end
           end
@@ -255,93 +256,10 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
 end
 mt.__call = index.Pathfind -- Allow use of Pathfinder() as well as Pathfinder:Pathfind()
 
---- Uses brute-force to shorten a path.
--- Please note this function is particularly slow ( O(n^2) ), so use it only when absolutely needed, or on shorter paths! (< 25-ish nodes).
--- An alternative is splitting
--- @tparam table path The path to shorten.
--- @tparam function? callback The function to be called while running.
--- @tparam boolean? debug If true, draws path as it is being calculated. Slows significantly due to setblock ratelimits.
-function index:BruteShorten(path, callback, debug)
-  CheckSelf(self)
-  expect(1, path, "table")
-  expect(2, callback, "function", "nil")
-  expect(3, debug, "boolean", "nil")
-  callback = callback or function() end
-
-  local bestPath = {}
-  for i = 1, #path do
-    bestPath[i] = path[i]
-  end
-
-  local function ReplaceNodes(i1, i2, nodes)
-    -- remove old nodes
-    for i = i2, i1, -1 do
-      table.remove(bestPath, i)
-    end
-
-    -- add new nodes
-    for j = 1, #nodes do
-      table.insert(bestPath, i1 + j - 1, nodes[j])
-    end
-  end
-
-  local len = #path
-  local i = 2
-  while bestPath[i] do
-    local node, prevNode = bestPath[i], bestPath[i - 1]
-    local x1, y1, z1 = node.X, node.Y, node.Z
-    local startFacing = 0
-
-    yieldCheck()
-    callback("bruteforce-shorten", i / len)
-
-    -- determine facing to next node.
-    if prevNode then
-      if node.Z > prevNode.Z then -- +z
-        startFacing = 0
-      elseif node.X < prevNode.X then -- -x
-        startFacing = 1
-      elseif node.Z < prevNode.Z then -- -z
-        startFacing = 2
-      else -- +x
-        startFacing = 3
-      end
-    end
-
-    local betterPathFound = false
-    for dist = 3, len - i + 1 do
-      local target = bestPath[i + dist]
-      if target then
-        local x2, y2, z2 = target.X, target.Y, target.Z
-
-        local ok, newPath = self:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, 10000, debug)
-        if not ok then
-          return ok, newPath
-        end
-        local newLength = #newPath
-
-        if newLength < dist then
-          -- better path found!
-          ReplaceNodes(i, i + dist, newPath)
-          betterPathFound = true
-          break
-        end
-      end
-    end
-
-    if not betterPathFound then
-      i = i + 1
-    end
-  end
-
-  callback("bruteforce-shorten-complete", 1)
-
-  return true, bestPath
-end
-
 --- Loads a map from a file.
 -- @tparam string filename the absolute path to the file.
 -- @tparam function? callback The callback to be used for loading.
+-- @treturn PathfinderObject Self.
 function index:LoadMap(filename, callback)
   CheckSelf(self)
   expect(1, filename, "string")
@@ -356,6 +274,8 @@ function index:LoadMap(filename, callback)
   return self
 end
 
+--- Gets the map object. Can also be grabbed via PathfinderObject.Map.
+-- @treturn table The MapObject associated with this PathfinderObject.
 function index:GetMap()
   CheckSelf(self)
 
@@ -363,13 +283,11 @@ function index:GetMap()
 end
 
 
---- The below three functions are all passthroughs to MapObject:Add___
+--- Passthrough
 -- @see MapObject:AddObstacle
 -- @tparam number x The x position to put the node.
 -- @tparam number y The y position to put the node.
 -- @tparam number z The z position to put the node.
--- @see Pathfinder:AddUnknown
--- @see Pathfinder:AddAir
 function index:AddObstacle(x, y, z)
   CheckSelf(self)
   expect(1, x, "number")
@@ -386,7 +304,6 @@ end
 -- @tparam number x The x position to put the node.
 -- @tparam number y The y position to put the node.
 -- @tparam number z The z position to put the node.
--- @see Pathfinder:AddObstacle
 function index:AddUnknown(x, y, z)
   CheckSelf(self)
   expect(1, x, "number")
@@ -403,7 +320,6 @@ end
 -- @tparam number x The x position to put the node.
 -- @tparam number y The y position to put the node.
 -- @tparam number z The z position to put the node.
--- @see Pathfinder:AddObstacle
 function index:AddAir(x, y, z)
   CheckSelf(self)
   expect(1, x, "number")
@@ -417,78 +333,38 @@ end
 
 --- Sets the map's internal offset.
 -- When getting node information, this offset is subtracted from the input.
+-- @tparam number x The X offset.
+-- @tparam number y The Y offset.
+-- @tparam number z The Z offset.
+-- @treturn PathfinderObject Self.
 function index:SetMapOffset(x, y, z)
   CheckSelf(self)
   expect(1, x, "number")
   expect(2, y, "number")
   expect(3, z, "number")
 
-  self.Map.offset[1] = x
-  self.Map.offset[2] = y
-  self.Map.offset[3] = z
+  self.Map.Offset[1] = x
+  self.Map.Offset[2] = y
+  self.Map.Offset[3] = z
 
   return self
 end
 
---- Depending on the mod of the scanner, will scan blocks around the scanner and add them to the map.
--- @tparam string object The peripheral name to be used to scan.
--- @tparam number range The range to be used.
--- @tparam number? offsetx The offset x position, defaults to 0.
--- @tparam number? offsety The offset y position, defaults to 0.
--- @tparam number? offsetz The offset z position, defaults to 0.
--- @tparam function? callback The callback to be called while loading.
--- @return The result of the scan, to be used by user.
-function index:ScanIntoMapUsing(object, range, offsetx, offsety, offsetz, callback)
-  CheckSelf(self)
-  expect(1, object, "string")
-  expect(2, range, "number")
-  expect(3, offsetx, "number", "nil")
-  expect(4, offsety, "number", "nil")
-  expect(5, offsetz, "number", "nil")
-  expect(6, callback, "function", "nil")
-  offsetx = offsetx or 0
-  offsety = offsety or 0
-  offsetz = offsetz or 0
-  callback = callback or function() end
-
-  local valid = {
-    geoScanner = function()
-      -- Scan
-      local scan, err = peripheral.call(object, "scan", range)
-
-      if scan then
-        -- Initialize every block in range as air.
-        for x = -range, range do
-          for y = -range, range do
-            yieldCheck()
-            for z = -range, range do
-              self:AddAir(x + offsetx, y + offsety, z + offsetz)
-            end
-          end
-        end
-
-        -- For each block in the scan range, add it as an obstacle.
-        for i, block in ipairs(scan) do
-          self:AddObstacle(block.x + offsetx, block.y + offsety, block.z + offsetz)
-        end
-      end
-
-      return scan, err
-    end
-  }
-
-  if valid[peripheral.getType(object)] then
-    return valid[peripheral.getType(object)]()
-  else
-    error(string.format("Unsupported scanner: %s", peripheral.getType(object)), 2)
-  end
-end
-
+--- Creates a new PathfinderObject.
+-- @tparam string name The name of this pathfinder (forwarded to the map).
+-- @tparam number? offsetx The offset on the X axis.
+-- @tparam number? offsety The offset on the Y axis.
+-- @tparam number? offsetz The offset on the Z axis.
+-- @treturn PathfinderObject The newly created object.
 function a.New(name, offsetx, offsety, offsetz)
   return setmetatable(
     {
       Map = map.New(name, offsetx, offsety, offsetz),
-      _ISPATHFINDER = true
+      _ISPATHFINDER = true,
+      Debug = {
+        PlaceBlocks = false
+      },
+      Budget = 3000
     },
     mt
   )
