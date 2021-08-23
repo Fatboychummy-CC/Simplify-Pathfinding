@@ -11,7 +11,7 @@
       location = "Pathfinder/init.lua"
     },
     {
-      remote = "https://raw.githubusercontent.com/Fatboychummy-CC/SimplifyPathfinding/master/map.lua",
+      remote = "https://raw.githubusercontent.com/Fatboychummy-CC/SimplifyPathfinding/master/Map.lua",
       location = "Pathfinder/Map.lua"
     },
     {
