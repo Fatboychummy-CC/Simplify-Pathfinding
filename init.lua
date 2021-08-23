@@ -86,8 +86,6 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing)
   expect(5, y2, "number")
   expect(6, z2, "number")
   expect(7, startFacing, "number")
-  expect(8, budget, "number", "nil")
-  budget = budget or 10000
 
   local map = self.Map
   local beginNode = map:Get(x1, y1, z1)
@@ -193,10 +191,10 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing)
 
   local function main()
     Insert(OPEN, beginNode)
-    PutBlock(debug, beginNode.x, beginNode.y, beginNode.z, "minecraft:white_stained_glass")
+    PutBlock(self.Debug.PlaceBlocks, beginNode.x, beginNode.y, beginNode.z, "minecraft:white_stained_glass")
     map:MakeStarterNode(beginNode, startFacing)
 
-    for i = 1, budget do
+    for i = 1, self.Budget do
       local lowest = GetLowest(OPEN)
       if not lowest then
         return false, "All available nodes traversed, no path found."
@@ -206,13 +204,13 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing)
 
       local current = Remove(OPEN, lowest)
       Insert(CLOSED, current)
-      PutBlock(debug, current.x, current.y, current.z, "minecraft:black_stained_glass")
+      PutBlock(self.Debug.PlaceBlocks, current.x, current.y, current.z, "minecraft:black_stained_glass")
 
       if current == endNode then
         return true, GetPath(endNode)
       end
 
-      local neighbors = map:GetNeighbors(current.x, current.y, current.z)
+      local neighbors = map:GetNeighbors(current)
       for facing = 0, 5 do
         local neighbor = neighbors[facing]
         if neighbor.S ~= 1 and not IsIn(CLOSED, neighbor) then
@@ -223,7 +221,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing)
             neighbor.H = h
             map:SetParent(neighbor, current)
             if not IsIn(OPEN, neighbor) then
-              PutBlock(debug, neighbor.x, neighbor.y, neighbor.z, "minecraft:white_stained_glass")
+              PutBlock(self.Debug.PlaceBlocks, neighbor.x, neighbor.y, neighbor.z, "minecraft:white_stained_glass")
               Insert(OPEN, neighbor)
             end
           end
@@ -342,7 +340,11 @@ function a.New(name, offsetx, offsety, offsetz)
   return setmetatable(
     {
       Map = map.New(name, offsetx, offsety, offsetz),
-      _ISPATHFINDER = true
+      _ISPATHFINDER = true,
+      Debug = {
+        PlaceBlocks = false
+      },
+      Budget = 10000
     },
     mt
   )
