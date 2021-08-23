@@ -40,7 +40,7 @@ function extras.Scanners.geoScanner(periphName, map, range, offsetx, offsety, of
     end
   end
 
-  local ok = (not scan) and true or false
+  local ok = scan and true or false
   local value = err and err or scan
 
   return ok, value
