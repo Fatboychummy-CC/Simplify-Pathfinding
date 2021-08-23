@@ -329,9 +329,9 @@ function index:SetMapOffset(x, y, z)
   expect(2, y, "number")
   expect(3, z, "number")
 
-  self.Map.offset[1] = x
-  self.Map.offset[2] = y
-  self.Map.offset[3] = z
+  self.Map.Offset[1] = x
+  self.Map.Offset[2] = y
+  self.Map.Offset[3] = z
 
   return self
 end

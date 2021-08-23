@@ -75,9 +75,9 @@ function MapObject:Serialize(mode, callback)
 
   Add(string.pack("<i1", #self.name))     -- name length
   Add(self.name)                          -- name
-  Add(string.pack("<i3", self.offset[1])) -- offset x
-  Add(string.pack("<i3", self.offset[2])) -- offset y
-  Add(string.pack("<i3", self.offset[3])) -- offset z
+  Add(string.pack("<i3", self.Offset[1])) -- offset x
+  Add(string.pack("<i3", self.Offset[2])) -- offset y
+  Add(string.pack("<i3", self.Offset[3])) -- offset z
 
   for xIndex, YList in pairs(self.Map) do
     for yIndex, ZList in pairs(YList) do
@@ -133,10 +133,10 @@ function MapObject:Serialize(mode, callback)
   -- Save each node run.
   for i = 1, runN do
     local run = noderuns[i]
-    Add(string.pack("<i1", run[1].x - self.offset[1])) -- run x
-    Add(string.pack("<i1", run[1].y - self.offset[2])) -- run y
-    Add(string.pack("<i1", run[1].z - self.offset[3])) -- run z
-    Add(string.pack("<i1", run[2].z - self.offset[3])) -- run end z
+    Add(string.pack("<i1", run[1].x - self.Offset[1])) -- run x
+    Add(string.pack("<i1", run[1].y - self.Offset[2])) -- run y
+    Add(string.pack("<i1", run[1].z - self.Offset[3])) -- run z
+    Add(string.pack("<i1", run[2].z - self.Offset[3])) -- run end z
     Add(string.pack("<i1", run[1].S)) -- run state
   end
 
@@ -179,9 +179,9 @@ end
 
 ---
 local function CreateNode(self, x, y, z, status, force)
-  local lx = x - self.offset[1]
-  local ly = y - self.offset[2]
-  local lz = z - self.offset[3]
+  local lx = x - self.Offset[1]
+  local ly = y - self.Offset[2]
+  local lz = z - self.Offset[3]
 
   if lx > 127 or lx < -128
     or ly > 127 or ly < -128
