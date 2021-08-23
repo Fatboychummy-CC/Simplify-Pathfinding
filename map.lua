@@ -44,11 +44,11 @@ function MapObject:Serialize(mode, callback)
     error("Name is too long! (Maximum 256 chars)", 2)
   end
 
-  self.status.percent = 0
-  self.status.state = "serialize"
-  callback(self.status.state, self.status.percent, self.name)
+  local percent = 0
+  local state = "serialize"
+  callback(state, percent, self.Name)
 
-  local max = self.loadedNodes
+  local max = 0
 
   if mode then
     local output = {}
@@ -81,8 +81,8 @@ function MapObject:Serialize(mode, callback)
 
   for xIndex, YList in pairs(self.Map) do
     for yIndex, ZList in pairs(YList) do
-      self.status.percent = count / max
-      callback(self.status.state, self.status.percent, self.name)
+      percent = count / max
+      callback(state, percent, self.Name)
 
       local runsRemain = true
       local seen = {}
@@ -140,9 +140,7 @@ function MapObject:Serialize(mode, callback)
     Add(string.pack("<i1", run[1].S)) -- run state
   end
 
-  self.status.percent = 1
-  self.status.state = "serialize-complete"
-  callback(self.status.state, self.status.percent, self.name)
+  callback("serialize-complete", percent, self.Name)
 
   return data
 end
@@ -233,7 +231,6 @@ local function CreateNode(self, x, y, z, status, force)
         or lz == 127 or lz == -128 then
         self.Map[lx][ly][lz].P2 = math.huge
       end
-      self.loadedNodes = self.loadedNodes + 1
     end
   end
 
@@ -432,7 +429,6 @@ function map.FromFile(filename, callback)
 
     local numNodeRuns = readNumber(4)
 
-    data.loadedNodes = 0
     for i = 1, numNodeRuns do
       local nodeX, nodeY, nodeZ, nodeEnd, nodeState = readNumber(1), readNumber(1), readNumber(1), readNumber(1), readNumber(1)
 
@@ -442,7 +438,6 @@ function map.FromFile(filename, callback)
       end
 
       local len = nodeZ - nodeEnd
-      data.loadedNodes = data.loadedNodes + len
 
       if nodeState == 2 then
         for z = nodeZ, nodeEnd do
@@ -463,11 +458,6 @@ function map.FromFile(filename, callback)
   if not ok then
     error("Failed to read file:\n" .. err, 2)
   end
-
-  data.status = {
-    state = "new",
-    percent = 0
-  }
 
   return data
 end
@@ -490,13 +480,8 @@ function map.New(name, offsetX, offsetY, offsetZ)
     {
       _ISMAP = true,
       Map = {},
-      loadedNodes = 0,
-      status = {
-        state = "new",
-        percent = 0
-      },
-      offset = {offsetX, offsetY, offsetZ},
-      name = name or "Untitled"
+      Offset = {offsetX, offsetY, offsetZ},
+      Name = name or "Untitled"
     },
     mapmt
   )
