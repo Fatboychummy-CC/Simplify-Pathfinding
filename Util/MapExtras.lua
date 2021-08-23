@@ -76,7 +76,7 @@ function index:Scan(range, offsetx, offsety, offsetz)
   expect(3, offsety, "number", "nil")
   expect(4, offsetz, "number", "nil")
 
-  for periphType in pairs(validScanners) do
+  for periphType in pairs(extras.Scanners) do
     local p = peripheral.find(periphType)
     if p then
       return self:ScanUsing(peripheral.getName(p), offsetx, offsety, offsetz)
