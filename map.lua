@@ -394,6 +394,7 @@ end
 
 --- This function loads a map from a file, it determines the mode required while loading.
 -- Does not yet support overflow files.
+-- Read specs/SaveSpec.md to understand this.
 -- @tparam string filename The name of the file to be loaded.
 -- @tparam function callback The callback to be called during stages of loading.
 -- @treturn mapobject
@@ -421,9 +422,9 @@ function map.FromFile(filename, callback)
     end
 
     local namelen = readNumber(1)
-    data.name = h:read(namelen)
+    data.Name = h:read(namelen)
 
-    data.offset = {readNumber(3), readNumber(3), readNumber(3)}
+    data.Offset = {readNumber(3), readNumber(3), readNumber(3)}
 
     local numNodeRuns = readNumber(4)
 
@@ -437,6 +438,8 @@ function map.FromFile(filename, callback)
 
       local len = nodeZ - nodeEnd
 
+      -- Only node types saved are air and obstacle, no need for unknowns.
+      -- Everything is unknown by default
       if nodeState == 2 then
         for z = nodeZ, nodeEnd do
           data:AddAir(nodeX, modeY, z)
