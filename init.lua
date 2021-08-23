@@ -344,7 +344,7 @@ function a.New(name, offsetx, offsety, offsetz)
       Debug = {
         PlaceBlocks = false
       },
-      Budget = 10000
+      Budget = 3000
     },
     mt
   )
