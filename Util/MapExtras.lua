@@ -89,7 +89,7 @@ end
 function extras.New(map)
   return setmetatable(
     {
-      Map = map
+      Map = map,
       _ISMAPEXTRA = true
     },
     mt
