@@ -73,19 +73,7 @@ local function CleanPlacements(enable)
 end
 
 --- Pathfind from a given point, to a given point.
--- Facings are: 0 = +z, 1 = -x, 2 = -z, 3 = +x
--- @tparam number x1 The first point position.
--- @tparam number y1 The first point position.
--- @tparam number z1 The first point position.
--- @tparam number x2 The second point position.
--- @tparam number y2 The second point position.
--- @tparam number z2 The second point position.
--- @tparam number startFacing The facing the turtle begins as.
--- @tparam number budget The loop budget to run with. If budget iterations have run, pathfinding will abort. Defaults to 10000.
--- @tparam boolean debug If true, draws path as it is being calculated. Slows significantly due to setblock ratelimits.
--- @treturn boolean If a valid path was found.
--- @treturn table? The path that was found.
-function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
+function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing)
   CheckSelf(self)
   expect(1, x1, "number")
   expect(2, y1, "number")
@@ -347,14 +335,7 @@ function index:SetMapOffset(x, y, z)
 end
 
 --- Depending on the mod of the scanner, will scan blocks around the scanner and add them to the map.
--- @tparam string object The peripheral name to be used to scan.
--- @tparam number range The range to be used.
--- @tparam number? offsetx The offset x position, defaults to 0.
--- @tparam number? offsety The offset y position, defaults to 0.
--- @tparam number? offsetz The offset z position, defaults to 0.
--- @tparam function? callback The callback to be called while loading.
--- @return The result of the scan, to be used by user.
-function index:ScanIntoMapUsing(object, range, offsetx, offsety, offsetz, callback)
+function index:ScanIntoMap(range, offsetx, offsety, offsetz, callback)
   CheckSelf(self)
   expect(1, object, "string")
   expect(2, range, "number")
