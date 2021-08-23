@@ -1,6 +1,6 @@
 local expect = require "cc.expect".expect
 
-local extras = {}
+local extras = {Scanners = {}}
 local mt = {}
 local index = mt.__index
 
@@ -19,7 +19,6 @@ local function yieldCheck()
   end
 end
 
-local extras.Scanners = {}
 function extras.Scanners.geoScanner(periphName, map, range, offsetx, offsety, offsetz)
   -- Scan the area.
   local scan, err = peripheral.call(periphName, "scan", range)
