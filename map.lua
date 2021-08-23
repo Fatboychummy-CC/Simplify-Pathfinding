@@ -312,7 +312,10 @@ function MapObject:MakeStarterNode(node, originFacing)
 
   node.F = 0
   node.Facing = startFacing
-  node.Parent = {Facing = startFacing, G = 0}
+  local fakeNode = {Neighbors = {}, Facing = startFacing, G = 0}
+  fakeNode.Neighbors[(originFacing + 2) % 4] = node
+
+  self:SetParent(node, fakeNode)
 end
 
 ---
