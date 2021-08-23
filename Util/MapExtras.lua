@@ -1,7 +1,7 @@
 local expect = require "cc.expect".expect
 
 local extras = {Scanners = {}}
-local mt = {}
+local mt = {__index = {}}
 local index = mt.__index
 
 local function CheckSelf(self)
