@@ -40,7 +40,7 @@ function MapObject:Serialize(mode, callback)
   expect(2, callback, "function", "nil")
   callback = callback or function() end
 
-  if name and #name > 256 then
+  if self.Name and #self.Name > 256 then
     error("Name is too long! (Maximum 256 chars)", 2)
   end
 
@@ -73,8 +73,8 @@ function MapObject:Serialize(mode, callback)
     data[n] = d
   end
 
-  Add(string.pack("<i1", #self.name))     -- name length
-  Add(self.name)                          -- name
+  Add(string.pack("<i1", #self.Name))     -- name length
+  Add(self.Name)                          -- name
   Add(string.pack("<i3", self.Offset[1])) -- offset x
   Add(string.pack("<i3", self.Offset[2])) -- offset y
   Add(string.pack("<i3", self.Offset[3])) -- offset z
