@@ -319,6 +319,13 @@ function MapObject:MakeStarterNode(node, originFacing)
 end
 
 ---
+function MapObject:ClearStarterNode(node)
+  node.F = math.huge
+  node.Facing = nil
+  node.ParentDir = nil
+  node.Parent = nil
+end
+
 function MapObject:SetParent(node, parentNode)
   CheckSelf(self)
   expect(1, node, "table")
