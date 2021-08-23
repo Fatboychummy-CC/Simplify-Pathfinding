@@ -248,7 +248,8 @@ function MapObject:Get(x, y, z)
   return CreateNode(self, x, y, z)
 end
 
---- This function resizes the map object.
+--- This function will generate nodes inside of a boundary
+-- It should make subsequent accesses faster.
 function MapObject:Pregen()
   CheckSelf(self)
 end
@@ -304,7 +305,10 @@ function MapObject:AddAir(x, y, z)
   return self
 end
 
----
+--- Sets some data in a node to turn it into an origin node.
+-- It creates a fake node to act as the parent, so pathfinding can occur in all directions, but preferrably in the direction we started.
+-- @tparam Node node The node to convert.
+-- @tparam number originFacing The facing of the origin node.
 function MapObject:MakeStarterNode(node, originFacing)
   CheckSelf(self)
   expect(1, node, "table")
@@ -318,7 +322,8 @@ function MapObject:MakeStarterNode(node, originFacing)
   self:SetParent(node, fakeNode)
 end
 
----
+--- Clears extra node data of starter node.
+-- @tparam Node node The node to clear.
 function MapObject:ClearStarterNode(node)
   node.F = math.huge
   node.Facing = nil
@@ -326,6 +331,10 @@ function MapObject:ClearStarterNode(node)
   node.Parent = nil
 end
 
+--- Set the parent of a node to another node.
+-- This function also handles directions, to be used while calculating G-cost (if OptimizeTurns is enabled).
+-- @tparam Node node The child node.
+-- @tparam Node parentNode The parent node.
 function MapObject:SetParent(node, parentNode)
   CheckSelf(self)
   expect(1, node, "table")
@@ -351,7 +360,11 @@ function MapObject:SetParent(node, parentNode)
   node.Parent = parentNode
 end
 
----
+--- Calculate the H-cost of input node.
+-- [H]euristic cost is the "Estimated cost to the end node, from input node."
+-- @tparam Node node The node to be calculated.
+-- @tparam Node endNode The target location's node.
+-- @treturn number The H-cost of this node.
 function MapObject:CalculateHCost(node, endNode)
   CheckSelf(self)
   expect(1, node   , "table")
@@ -363,7 +376,11 @@ function MapObject:CalculateHCost(node, endNode)
        * self.HFavor
 end
 
----
+--- Calculate the G-cost of input node.
+-- G cost is the "Actual cost of moving to this node, from the beginning."
+-- @tparam Node node The node to be calculated.
+-- @tparam Node fromNeighbor The node that would act as a "parent" node to the node being calculated.
+-- @treturn number The G-cost of arriving at this node.
 function MapObject:CalculateGCost(node, fromNeighbor)
   CheckSelf(self)
   expect(1, node, "table")
@@ -391,7 +408,12 @@ function MapObject:CalculateGCost(node, fromNeighbor)
   return (fromNeighbor.G + turn + unknown + 1) * self.GFavor
 end
 
----
+--- Calculate F cost of a node.
+-- This also calculates (and returns) G and H cost, since F cost is simply G + H.
+-- @tparam Node node The node to calculate.
+-- @tparam Node fromNeighbor The node that would act as a "parent" node to the node being calculated.
+-- @tparam Node endNode The target node.
+-- @treturn number,number,number F-cost, G-cost, H-cost
 function MapObject:CalculateFGHCost(node, fromNeighbor, endNode)
   CheckSelf(self)
   expect(1, node, "table")
