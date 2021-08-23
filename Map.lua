@@ -162,7 +162,9 @@ function MapObject:GetNeighbors(node)
   CheckSelf(self)
   expect(1, node, "table")
 
-  if #node.Neighbors < 6 then
+
+  if not node.Neighbors or #node.Neighbors < 6 then
+    local x, y, z = node.x, node.y, node.z
     node.Neighbors = {}
     for i = 1, 6 do
       local _x, _y, _z, dirname = table.unpack(directions[i], 1, 4)
