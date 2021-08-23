@@ -350,9 +350,10 @@ function MapObject:CalculateHCost(node, endNode)
   expect(1, node   , "table")
   expect(2, endNode, "table")
 
-  return abs(node.x - endNode.x)
+  return (abs(node.x - endNode.x)
        + abs(node.y - endNode.y)
-       + abs(node.z - endNode.z)
+       + abs(node.z - endNode.z))
+       * self.HFavor
 end
 
 ---
@@ -378,7 +379,7 @@ function MapObject:CalculateGCost(node, fromNeighbor)
     end
   end
 
-  return fromNeighbor.G + turn + unknown + 1
+  return (fromNeighbor.G + turn + unknown + 1) * self.GFavor
 end
 
 ---
@@ -477,10 +478,12 @@ function map.New(name, offsetX, offsetY, offsetZ)
   offsetZ = offsetZ or 0
 
   return setmetatable(
-    {
+    {,m
       _ISMAP = true,
       Map = {},
       Offset = {offsetX, offsetY, offsetZ},
+      GFavor = 1,
+      HFavor = 1,
       Name = name or "Untitled"
     },
     mapmt
