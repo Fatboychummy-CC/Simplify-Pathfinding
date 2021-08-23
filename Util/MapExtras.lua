@@ -47,7 +47,13 @@ function extras.Scanners.geoScanner(periphName, map, range, offsetx, offsety, of
 end
 
 
---- Depending on the mod of the scanner, will scan blocks around the scanner and add them to the map.
+--- Scans data into the map using given scanner.
+-- @tparam table|string object The peripheral (name or object) to scan with.
+-- @tparam number range The range of the scanner.
+-- @tparam number? offsetx The offset of the scanner from the map's 0,0,0 position on the X axis.
+-- @tparam number? offsety The offset of the scanner from the map's 0,0,0 position on the Y axis.
+-- @tparam number? offsetz The offset of the scanner from the map's 0,0,0 position on the Z axis.
+-- @treturn boolean,table|string Regardless of the type of scanner used, this method normalizes the output to [true/false, {scandata}|"string error"].
 function index:ScanUsing(object, range, offsetx, offsety, offsetz)
   CheckSelf(self)
   expect(1, object, "table", "string")
@@ -72,6 +78,11 @@ function index:ScanUsing(object, range, offsetx, offsety, offsetz)
 end
 
 -- Selects a scanner that is available, depending on what is attached, and scans using :ScanUsing
+-- @tparam number? range The range wanted. Will default to 8.
+-- @tparam number? offsetx The offset of the scanner from the map's 0,0,0 position on the X axis.
+-- @tparam number? offsety The offset of the scanner from the map's 0,0,0 position on the Y axis.
+-- @tparam number? offsetz The offset of the scanner from the map's 0,0,0 position on the Z axis.
+-- @treturn boolean,table|string Regardless of the type of scanner used, this method normalizes the output to [true/false, {scandata}|"string error"].
 function index:Scan(range, offsetx, offsety, offsetz)
   CheckSelf(self)
   expect(1, range, "number")
