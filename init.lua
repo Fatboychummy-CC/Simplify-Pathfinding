@@ -24,15 +24,15 @@ end
 
 local map = require(Combine "Map")
 
-local a = {}
+local a = {YieldTime = 3000}
 local mt = {__index = {}}
 local index = mt.__index
 
 -- Yield function to yield when needed.
-local endTime = os.epoch("utc") + 3000
+local endTime = os.epoch("utc") + a.YieldTime
 local function yieldCheck()
   if endTime < os.epoch("utc") then
-    endTime = os.epoch("utc") + 3000
+    endTime = os.epoch("utc") + a.YieldTime
     os.queueEvent("pathfinder_dummy_event")
     os.pullEvent("pathfinder_dummy_event")
   end

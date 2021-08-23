@@ -8,15 +8,16 @@ local expect = require "cc.expect".expect
 -- set math functions as local
 local abs, deg, atan2, min, sqrt = math.abs, math.deg, math.atan2, math.min, math.sqrt
 
-local map = {}
+local map = {YieldTime = 3000}
 local mapmt = {__index = {}}
 local MapObject = mapmt.__index
-local endTime = os.epoch("utc") + 3000
+local endTime = os.epoch("utc") + map.YieldTime
 local function yieldCheck()
   if endTime < os.epoch("utc") then
-    endTime = os.epoch("utc") + 3000
+    endTime = os.epoch("utc") + map.YieldTime
     os.queueEvent("pathfinder_dummy_event")
     os.pullEvent("pathfinder_dummy_event")
+    return true
   end
 end
 
