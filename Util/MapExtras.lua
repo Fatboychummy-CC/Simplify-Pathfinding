@@ -95,3 +95,5 @@ function extras.New(map)
     mt
   )
 end
+
+return extras
