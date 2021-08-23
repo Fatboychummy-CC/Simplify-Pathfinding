@@ -3,6 +3,12 @@
 -- @alias a
 
 local prefix, pathToSelf = ...
+if prefix:match("%.init$") then
+  prefix = prefix:sub(1, -5) -- require "Pathfinder.init" for whatever reason
+else
+  prefix = prefix .. "." -- require "Pathfinder"
+end
+-- prefix is now "Path.To.Pathfinder."
 
 local ok, expect = pcall(require, "cc.expect")
 if ok then
@@ -11,7 +17,12 @@ else
   error("This module will only work on CC:Tweaked for minecraft 1.12.2+")
 end
 
-local map = require("map")
+-- Combine prefix to library.
+local function Combine(lib)
+  return prefix .. lib
+end
+
+local map = require(Combine "Map")
 
 local a = {}
 local mt = {__index = {}}
