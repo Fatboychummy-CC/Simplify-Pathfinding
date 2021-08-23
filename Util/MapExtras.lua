@@ -79,7 +79,7 @@ function index:Scan(range, offsetx, offsety, offsetz)
   for periphType in pairs(extras.Scanners) do
     local p = peripheral.find(periphType)
     if p then
-      return self:ScanUsing(peripheral.getName(p), offsetx, offsety, offsetz)
+      return self:ScanUsing(peripheral.getName(p), range, offsetx, offsety, offsetz)
     end
   end
 
