@@ -86,6 +86,7 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing)
   expect(5, y2, "number")
   expect(6, z2, "number")
   expect(7, startFacing, "number")
+  startFacing = startFacing or 0
 
   local map = self.Map
   local beginNode = map:Get(x1, y1, z1)
