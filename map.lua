@@ -154,27 +154,24 @@ local directions = {
   { 0, 0,-1, 2 }  -- negative Z
 }
 
----
+--- This method will populate a node's neighbors (if they haven't been populated already).
+-- Directions 0-3 are along x/z axis, 4 and 5 are y axis.
+-- @tparam Node node The node to populate.
+-- @treturn {Node, Node, Node, Node, Node, Node} The neighbors of the node.
 function MapObject:GetNeighbors(node)
   CheckSelf(self)
-  expect(1, x, "number")
-  expect(2, y, "number")
-  expect(3, z, "number")
+  expect(1, node, "table")
 
-  -- Offsets do not need to be calculated here
-  -- using self:Get does that implicitly.
+  if #node.Neighbors < 6 then
+    node.Neighbors = {}
+    for i = 1, 6 do
+      local _x, _y, _z, dirname = table.unpack(directions[i], 1, 4)
+      _x = _x + x
+      _y = _y + y
+      _z = _z + z
 
-  local map = self.Map
-
-  local node = self:Get(x, y, z)
-  node.Neighbors = {}
-  for i = 1, 6 do
-    local _x, _y, _z, dirname = table.unpack(directions[i], 1, 4)
-    _x = _x + x
-    _y = _y + y
-    _z = _z + z
-
-    node.Neighbors[dirname] = self:Get(_x, _y, _z) -- add neighbor to node
+      node.Neighbors[dirname] = self:Get(_x, _y, _z) -- add neighbor to node
+    end
   end
 
   return node.Neighbors
