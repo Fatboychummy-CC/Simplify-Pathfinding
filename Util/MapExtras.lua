@@ -60,9 +60,9 @@ function index:ScanUsing(object, range, offsetx, offsety, offsetz)
     object = peripheral.getName(object)
   end
 
-  if extras.Scanners[peripheral.getType(object)] then
-    return extras.Scanners[peripheral.getType(object)]
-           (object, self.Map, range, offsetx, offsety, offsetz)
+  local t = peripheral.getType(object)
+  if extras.Scanners[t] then
+    return extras.Scanners[t](object, self.Map, range, offsetx, offsety, offsetz)
   else
     error(string.format("Unsupported scanner: %s", peripheral.getType(object)), 2)
   end
