@@ -12,7 +12,7 @@
     },
     {
       remote = "https://raw.githubusercontent.com/Fatboychummy-CC/SimplifyPathfinding/master/map.lua",
-      location = "Pathfinder/map.lua"
+      location = "Pathfinder/Map.lua"
     },
     {
       remote = "https://raw.githubusercontent.com/Fatboychummy-CC/SimplifyPathfinding/master/MapExtras.lua",
