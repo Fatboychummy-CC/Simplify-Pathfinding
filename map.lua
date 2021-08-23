@@ -461,7 +461,11 @@ function map.FromFile(filename, callback)
 end
 
 --- Creates a new, blank map.
--- @treturn mapobject
+-- @tparam string name The name of this map.
+-- @tparam number? offsetX The offset in X axis.
+-- @tparam number? offsetY The offset in Y axis.
+-- @tparam number? offsetZ The offset in Z axis.
+-- @treturn MapObject
 function map.New(name, offsetX, offsetY, offsetZ)
   expect(1, name, "string", "nil")
   if name and #name > 256 then
