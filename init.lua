@@ -41,18 +41,24 @@ local function CheckSelf(self)
 end
 
 local placed = {n = 0}
+local asyncCount = 0
 local function PutBlock(enable, x, y, z, name, clearing)
   if enable then
-    commands.exec(
+    if not clearing then
+      placed.n = placed.n + 1
+      placed[placed.n] = {x,y,z}
+    end
+    local _ = commands.execAsync(
       string.format(
         "setblock %d %d %d %s",
         x, y, z,
         name
       )
     )
-    if not clearing then
-      placed.n = placed.n + 1
-      placed[placed.n] = {x,y,z}
+    asyncCount = asyncCount + 1
+    if asyncCount >= (clearing and 50 or 10) then
+      asyncCount = 0
+      os.sleep()
     end
   end
 end
@@ -190,53 +196,62 @@ function index:Pathfind(x1, y1, z1, x2, y2, z2, startFacing, budget, debug)
 
     path.n = #path
 
-    CleanNodes(CLOSED)
-    CleanNodes(OPEN)
-    CleanPlacements(debug)
-
     return path
   end
 
-  Insert(OPEN, beginNode)
-  PutBlock(debug, beginNode.x, beginNode.y, beginNode.z, "minecraft:white_stained_glass")
-  map:MakeStarterNode(beginNode, startFacing)
+  local function main()
+    Insert(OPEN, beginNode)
+    PutBlock(debug, beginNode.x, beginNode.y, beginNode.z, "minecraft:white_stained_glass")
+    map:MakeStarterNode(beginNode, startFacing)
 
-  for i = 1, budget do
-    local lowest = GetLowest(OPEN)
-    if not lowest then
-      return false, "All available nodes traversed, no path found."
-    end
+    for i = 1, budget do
+      local lowest = GetLowest(OPEN)
+      if not lowest then
+        return false, "All available nodes traversed, no path found."
+      end
 
-    yieldCheck()
+      yieldCheck()
 
-    local current = Remove(OPEN, lowest)
-    Insert(CLOSED, current)
-    PutBlock(debug, current.x, current.y, current.z, "minecraft:black_stained_glass")
+      local current = Remove(OPEN, lowest)
+      Insert(CLOSED, current)
+      PutBlock(debug, current.x, current.y, current.z, "minecraft:black_stained_glass")
 
-    if current == endNode then
-      return true, GetPath(endNode)
-    end
+      if current == endNode then
+        return true, GetPath(endNode)
+      end
 
-    local neighbors = map:GetNeighbors(current.x, current.y, current.z)
-    for facing = 0, 5 do
-      local neighbor = neighbors[facing]
-      if neighbor.S ~= 1 and not IsIn(CLOSED, neighbor) then
-        local f, g, h = map:CalculateFGHCost(neighbor, current, endNode)
-        if f < neighbor.F then
-          neighbor.F = f
-          neighbor.G = g
-          neighbor.H = h
-          map:SetParent(neighbor, current)
-          if not IsIn(OPEN, neighbor) then
-            PutBlock(debug, neighbor.x, neighbor.y, neighbor.z, "minecraft:white_stained_glass")
-            Insert(OPEN, neighbor)
+      local neighbors = map:GetNeighbors(current.x, current.y, current.z)
+      for facing = 0, 5 do
+        local neighbor = neighbors[facing]
+        if neighbor.S ~= 1 and not IsIn(CLOSED, neighbor) then
+          local f, g, h = map:CalculateFGHCost(neighbor, current, endNode)
+          if f < neighbor.F then
+            neighbor.F = f
+            neighbor.G = g
+            neighbor.H = h
+            map:SetParent(neighbor, current)
+            if not IsIn(OPEN, neighbor) then
+              PutBlock(debug, neighbor.x, neighbor.y, neighbor.z, "minecraft:white_stained_glass")
+              Insert(OPEN, neighbor)
+            end
           end
         end
       end
     end
+
+    return false, "Budget expended"
   end
 
-  return false, "Budget expended"
+  local ok, val1, val2 = pcall(main)
+
+  CleanNodes(CLOSED)
+  CleanNodes(OPEN)
+  CleanPlacements(debug)
+
+  if not ok then
+    return false, val1
+  end
+  return val1, val2
 end
 mt.__call = index.Pathfind -- Allow use of Pathfinder() as well as Pathfinder:Pathfind()
 
