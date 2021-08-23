@@ -367,11 +367,13 @@ function MapObject:CalculateGCost(node, fromNeighbor)
   end
 
   -- determine if the turtle has turned.
-  for dir = 0, 3 do
-    if testNode == node then
-      if dir ~= fromNeighbor.ParentDir then
-        turn = 1
-        break
+  if self.OptimizeTurns then
+    for dir = 0, 3 do
+      if testNode == node then
+        if dir ~= fromNeighbor.ParentDir then
+          turn = 1
+          break
+        end
       end
     end
   end
@@ -488,6 +490,7 @@ function map.New(name, offsetX, offsetY, offsetZ)
       Offset = {offsetX, offsetY, offsetZ},
       GFavor = 1,
       HFavor = 1,
+      OptimizeTurns = true,
       Name = name or "Untitled"
     },
     mapmt
