@@ -516,7 +516,7 @@ function map.New(name, offsetX, offsetY, offsetZ)
   offsetZ = offsetZ or 0
 
   return setmetatable(
-    {,m
+    {
       _ISMAP = true,
       Map = {},
       Offset = {offsetX, offsetY, offsetZ},
