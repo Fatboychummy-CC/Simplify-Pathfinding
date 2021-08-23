@@ -4,23 +4,6 @@
 
 local prefix, pathToSelf = ...
 
--- Alter the package path so all submodules can require as needed.
-local dir = "/" .. fs.getDir(pathToSelf)
-local addon = string.format(";/%s/?.lua;/%s/?/init.lua", dir, dir)
-if not string.find(package.path, addon, nil, 1) then
-  package.path = package.path .. addon
-end
-
--- Yield function to yield when needed.
-local endTime = os.epoch("utc") + 3000
-local function yieldCheck()
-  if endTime < os.epoch("utc") then
-    endTime = os.epoch("utc") + 3000
-    os.queueEvent("pathfinder_dummy_event")
-    os.pullEvent("pathfinder_dummy_event")
-  end
-end
-
 local ok, expect = pcall(require, "cc.expect")
 if ok then
   expect = expect.expect
@@ -33,6 +16,16 @@ local map = require("map")
 local a = {}
 local mt = {__index = {}}
 local index = mt.__index
+
+-- Yield function to yield when needed.
+local endTime = os.epoch("utc") + 3000
+local function yieldCheck()
+  if endTime < os.epoch("utc") then
+    endTime = os.epoch("utc") + 3000
+    os.queueEvent("pathfinder_dummy_event")
+    os.pullEvent("pathfinder_dummy_event")
+  end
+end
 
 local function CheckSelf(self)
   if type(self) ~= "table" or not self._ISPATHFINDER then
@@ -332,53 +325,6 @@ function index:SetMapOffset(x, y, z)
   self.Map.offset[3] = z
 
   return self
-end
-
---- Depending on the mod of the scanner, will scan blocks around the scanner and add them to the map.
-function index:ScanIntoMap(range, offsetx, offsety, offsetz, callback)
-  CheckSelf(self)
-  expect(1, object, "string")
-  expect(2, range, "number")
-  expect(3, offsetx, "number", "nil")
-  expect(4, offsety, "number", "nil")
-  expect(5, offsetz, "number", "nil")
-  expect(6, callback, "function", "nil")
-  offsetx = offsetx or 0
-  offsety = offsety or 0
-  offsetz = offsetz or 0
-  callback = callback or function() end
-
-  local valid = {
-    geoScanner = function()
-      -- Scan
-      local scan, err = peripheral.call(object, "scan", range)
-
-      if scan then
-        -- Initialize every block in range as air.
-        for x = -range, range do
-          for y = -range, range do
-            yieldCheck()
-            for z = -range, range do
-              self:AddAir(x + offsetx, y + offsety, z + offsetz)
-            end
-          end
-        end
-
-        -- For each block in the scan range, add it as an obstacle.
-        for i, block in ipairs(scan) do
-          self:AddObstacle(block.x + offsetx, block.y + offsety, block.z + offsetz)
-        end
-      end
-
-      return scan, err
-    end
-  }
-
-  if valid[peripheral.getType(object)] then
-    return valid[peripheral.getType(object)]()
-  else
-    error(string.format("Unsupported scanner: %s", peripheral.getType(object)), 2)
-  end
 end
 
 function a.New(name, offsetx, offsety, offsetz)
