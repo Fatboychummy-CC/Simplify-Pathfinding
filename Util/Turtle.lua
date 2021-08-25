@@ -1,365 +1,389 @@
+--- Turtle stoof
 local expect = require "cc.expect".expect
 
-local old = {}
-local position = {0, 0, 0}
-local facing = 0
 local offsets = {
   [0] = { 0, 0, 1},
   [1] = {-1, 0, 0},
   [2] = { 0, 0,-1},
-  [3] = { 1, 0, 0},
+  [3] = { 1, 0, 0}
 }
 
-local function AddOffsets()
+local function AddOffsets(position, facing)
   return position[1] + offsets[facing][1],
          position[2] + offsets[facing][2],
          position[3] + offsets[facing][3]
 end
-local function SubOffsets()
+local function SubOffsets(position, facing)
   return position[1] - offsets[facing][1],
          position[2] - offsets[facing][2],
          position[3] - offsets[facing][3]
 end
-local function AddUp()
+local function AddUp(position)
   return position[1], position[2] + 1, position[3]
 end
-local function AddDown()
+local function AddDown(position)
   return position[1], position[2] - 1, position[3]
 end
 
-return function(pathfinderObj, override)
-  if override then
-    if not turtle._PATHFINDER_OVERRIDE then
-      for k, v in pairs(turtle) do
-        if type(v) == "function" then
-          old[k] = v
-        end
-      end
+local module = {}
+local mt = {__index = {}}
+local index = mt.__index
 
-      local function scan()
-        if turtle.detect() then
-          pathfinderObj:AddObstacle(AddOffsets())
-        else
-          pathfinderObj:AddAir(AddOffsets())
-        end
-        if turtle.detectDown() then
-          pathfinderObj:AddObstacle(AddDown())
-        else
-          pathfinderObj:AddAir(AddDown())
-        end
-        if turtle.detectUp() then
-          pathfinderObj:AddObstacle(AddUp())
-        else
-          pathfinderObj:AddAir(AddUp())
-        end
-      end
+local function CheckSelf(self)
+  if type(self) ~= "table" or not self._ISTURTLEUTIL then
+    error("Expected ':' when calling method on TurtleUtil.", 3)
+  end
+end
 
-      local floor = math.floor
-      local function floorLocate()
-        local x, y, z = gps.locate()
-        if x then
-          return floor(x), floor(y), floor(z)
-        end
-      end
+local floor = math.floor
+local function floorLocate()
+  local x, y, z = gps.locate()
+  if x then
+    return floor(x), floor(y), floor(z)
+  end
+end
 
-      -- Declare functions to be overridden.
-      local overrides = {
-        -- [[ DEFAULT MOVEMENT FUNCTIONS ]]
-        forward = function()
-          local ok, err = old.forward()
-          if ok then
-            position = {AddOffsets()}
-          end
+function index:TurtleScan()
+  CheckSelf(self)
 
-          scan()
-
-          return ok, err
-        end,
-        back = function()
-          local ok, err = old.back()
-          if ok then
-            position = {SubOffsets()}
-          end
-
-          scan()
-
-          return ok, err
-        end,
-        turnRight = function()
-          local ok, err = old.turnRight()
-          if ok then
-            facing = (facing + 1) % 4
-          end
-
-          scan()
-
-          return ok, err
-        end,
-        turnLeft = function()
-          local ok, err = old.turnLeft()
-          if ok then
-            facing = (facing - 1) % 4
-          end
-
-          scan()
-
-          return ok, err
-        end,
-        up = function()
-          local ok, err = old.up()
-          if ok then
-            position = {AddUp()}
-          end
-
-          scan()
-
-          return ok, err
-        end,
-        down = function()
-          local ok, err = old.down()
-          if ok then
-            position = {AddDown()}
-          end
-
-          scan()
-
-          return ok, err
-        end,
-        dig = function()
-          local ok, err = old.dig()
-          if ok then
-            pathfinderObj:AddAir(AddOffsets())
-          end
-          return ok, err
-        end,
-        digDown = function()
-          local ok, err = old.digDown()
-          if ok then
-            pathfinderObj:AddAir(AddDown())
-          end
-          return ok, err
-        end,
-        digUp = function()
-          local ok, err = old.digUp()
-          if ok then
-            pathfinderObj:AddAir(AddUp())
-          end
-          return ok, err
-        end,
-        -- [[ NEW TURTLE FUNCTIONS ]]
-
-        -- This function attempts to locate the turtle using GPS
-        locate = function()
-          -- Get first position
-          local tPos = {floorLocate()}
-
-          -- Never assume it just magically works.
-          if not tPos[1] then
-            return false, "GPS failure."
-          end
-          pathfinderObj:SetMapOffset(tPos[1], tPos[2], tPos[3])
-          position = {tPos[1], tPos[2], tPos[3]}
-
-          -- "Main loop" for turtle movement
-          -- Turtle will spin if block is in front
-          -- After full 360* turn, will go up a block.
-          -- Repeat above until block above, then turtle will go down instead of up.
-          -- Repeat all of above until air in front of turtle.
-          local function moveLoop()
-            local i = -1
-            local ud = turtle.up
-            while turtle.detect() do
-              turtle.turnLeft()
-              i = i + 1
-              if i % 4 == 0 and i ~= 0 then
-                if not ud() then
-                  if ud == turtle.down then
-                    return false
-                  end
-                  ud = turtle.down
-                  ud()
-                end
-              end
-            end
-
-            return true
-          end
-
-          while true do
-            -- Check if we're stuck in some kinda area
-            if not moveLoop() then
-              return false, "Stuck."
-            end
-
-            -- Not stuck, lets move forward!
-            if turtle.forward() then
-              -- get second position after movement
-              local tPos2 = {floorLocate()}
-              if not tPos2[1] then
-                return false, "GPS failure."
-              end
-              position = tPos2 -- set current position
-
-              -- Determine facing based off of what direction we moved.
-              if tPos2[1] > tPos[1] then
-                -- facing positive X
-                facing = 3
-              elseif tPos2[3] > tPos[3] then
-                -- facing positive Z
-                facing = 0
-              elseif tPos2[1] < tPos[1] then
-                -- facing negative X
-                facing = 1
-              else
-                -- facing negative Z
-                facing = 2
-              end
-              return true
-            end
-          end
-        end,
-
-        -- This function will face the turtle in a specific direction.
-        -- 0 = +Z, 1 = -X, 2 = -Z, 3 = +X
-        face = function(direction)
-          expect(1, direction, "number")
-          if direction < 0 or direction > 3 or direction % 1 ~= 0 then
-            error("Bad argument #1: Expected integer in range 0-3", 2)
-          end
-
-          if facing == direction then return end
-
-          if (facing + 1) % 4 == direction then
-            turtle.turnRight()
-          else
-            while facing ~= direction do
-              turtle.turnLeft()
-            end
-          end
-        end,
-
-        -- Simple goto function that just attempts to move in a direction
-        simpleGoTo = function(x, y, z, canAttack, canDig, forceForward)
-          expect(1, x, "number")
-          expect(2, y, "number")
-          expect(3, z, "number")
-          expect(4, canAttack   , "boolean", "nil")
-          expect(5, canDig      , "boolean", "nil")
-          expect(6, forceForward, "boolean", "nil")
-
-          -- This subfunction will attack and dig when movement fails, if allowed
-          -- if neither are allowed, will error.
-          local function ensure(movement, attack, dig)
-            local ok, err = movement()
-            if not ok then
-              if movement == turtle.back then
-                turtle.turnRight()
-                turtle.turnRight()
-              end
-
-              if canAttack then
-                attack()
-              end
-              if canDig then
-                dig()
-              end
-
-              if movement == turtle.back then
-                turtle.turnRight()
-                turtle.turnRight()
-              end
-              if not canAttack and not canDig then
-                error(string.format(
-                  "Failed to move, and is not allowed to attack or dig: %s",
-                  err
-                ), 3)
-              end
-            end
-          end
-
-          -- Align to X axis
-          while position[1] ~= x do
-            local d = turtle.forward
-            if position[1] > x then -- face -x
-              if forceForward or facing ~= 3 then
-                turtle.face(1)
-              else
-                d = turtle.back
-              end
-            else -- face +x
-              if forceForward or facing ~= 1 then
-                turtle.face(3)
-              else
-                d = turtle.back
-              end
-            end
-            ensure(d, turtle.attack, turtle.dig)
-          end
-
-          -- Align to Y axis
-          while position[2] ~= y do
-            if position[2] > y then -- go down
-              ensure(turtle.down, turtle.attackDown, turtle.digDown)
-            else -- go up
-              ensure(turtle.up, turtle.attackUp, turtle.digUp)
-            end
-          end
-
-          -- Align to Z axis
-          while position[3] ~= z do
-            local d = turtle.forward
-            if position[3] > z then -- face -z
-              if forceForward or facing ~= 0 then
-                turtle.face(2)
-              else
-                d = turtle.back
-              end
-            else -- face +z
-              if forceForward or facing ~= 2 then
-                turtle.face(0)
-              else
-                d = turtle.back
-              end
-            end
-            ensure(d, turtle.attack, turtle.dig)
-          end
-        end,
-
-        -- Function that follows a path from pathfinder
-        followPath = function(path, canAttack, canDig, forceForward)
-          expect(1, path, "table")
-          expect(2, canAttack   , "boolean", "nil")
-          expect(3, canDig      , "boolean", "nil")
-          expect(4, forceForward, "boolean", "nil")
-
-          for i = 1, #path do
-            turtle.simpleGoTo(path[i].X, path[i].Y, path[i].Z, canAttack, canDig, forceForward)
-          end
-        end,
-        getPosition = function()
-          return position[1], position[2], position[3]
-        end,
-        getFacing = function()
-          return facing
-        end
-      }
-
-      for k, v in pairs(overrides) do
-        turtle[k] = v
-      end
-      turtle._PATHFINDER_OVERRIDE = true
-    else
-      error("Pathfinder has already overridden turtle functions.", 2)
-    end
+  if turtle.detect() then
+    self.Pathfinder:AddObstacle(AddOffsets())
   else
-    if turtle._PATHFINDER_OVERRIDE then
-      for k, v in pairs(old) do
-        turtle[k] = v
+    self.Pathfinder:AddAir(AddOffsets())
+  end
+  if turtle.detectDown() then
+    self.Pathfinder:AddObstacle(AddDown())
+  else
+    self.Pathfinder:AddAir(AddDown())
+  end
+  if turtle.detectUp() then
+    self.Pathfinder:AddObstacle(AddUp())
+  else
+    self.Pathfinder:AddAir(AddUp())
+  end
+end
+
+function index:Forward()
+  CheckSelf(self)
+  local ok, err = turtle.forward()
+  if ok then
+    self.Position = {AddOffsets(self.Position)}
+  end
+
+  self:TurtleScan()
+
+  return ok, err
+end
+
+function index:Back()
+  CheckSelf(self)
+  local ok, err = turtle.back()
+  if ok then
+    self.Position = {SubOffsets(self.Position)}
+  end
+
+  self:TurtleScan()
+
+  return ok, err
+end
+
+function index:Up()
+  CheckSelf(self)
+  local ok, err = turtle.up()
+  if ok then
+    self.Position = {AddUp(self.Position)}
+  end
+
+  self:TurtleScan()
+
+  return ok, err
+end
+
+function index:Down()
+  CheckSelf(self)
+  local ok, err = turtle.down()
+  if ok then
+    self.Position = {AddDown(self.Position)}
+  end
+
+  self:TurtleScan()
+
+  return ok, err
+end
+
+function index:TurnLeft()
+  CheckSelf(self)
+  local ok, err = turtle.turnLeft()
+  if ok then
+    self.Facing = (self.Facing - 1) % 4
+  end
+
+  self:TurtleScan()
+
+  return ok, err
+end
+
+function index:TurnRight()
+  CheckSelf(self)
+  local ok, err = turtle.turnRight()
+  if ok then
+    self.Facing = (self.Facing + 1) % 4
+  end
+
+  self:TurtleScan()
+
+  return ok, err
+end
+
+function index:Dig()
+  CheckSelf(self)
+  local ok, err = turtle.dig()
+  if ok then
+    self.Pathfinder:AddAir(AddOffsets(self.Position))
+  end
+
+  return ok, err
+end
+
+function index:DigDown()
+  CheckSelf(self)
+  local ok, err = turtle.digDown()
+  if ok then
+    self.Pathfinder:AddAir(AddDown(self.Position))
+  end
+
+  return ok, err
+end
+
+function index:DigUp()
+  CheckSelf(self)
+  local ok, err = turtle.digUp()
+  if ok then
+    self.Pathfinder:AddAir(AddUp(self.Position))
+  end
+
+  return ok, err
+end
+
+function index:Locate()
+  CheckSelf(self)
+  local pos = {floorLocate()}
+
+  if not pos[1] then
+    return false, "GPS failure."
+  end
+
+  self.Pathfinder:SetMapOffset(pos[1], pos[2], pos[3])
+  self.Position = {pos[1], pos[2], pos[3]}
+
+  -- "Main loop" for turtle movement
+  -- Turtle will spin if block is in front
+  -- After full 360* turn, will go up a block.
+  -- Repeat above until block above, then turtle will go down instead of up.
+  -- Repeat all of above until air in front of turtle.
+  local function moveLoop()
+    local i = -1
+    local ud = self.Up
+    while turtle.detect() do
+      self:TurnLeft()
+      i = i + 1
+      if i % 4 == 0 and i ~= 0 then
+        if not ud(self) then
+          if ud == self.Down then
+            return false
+          end
+          ud = self.down
+          ud(self)
+        end
+      end
+    end
+
+    return true
+  end
+
+  while true do
+    -- Check if we're stuck in some kinda area
+    if not moveLoop() then
+      return false, "Stuck."
+    end
+
+    -- Not stuck, lets move forward!
+    if self:Forward() then
+      -- get second position after movement
+      local pos2 = {floorLocate()}
+      if not pos2[1] then
+        return false, "GPS failure."
       end
 
-      turtle.locate = nil
-    else
-      error("Pathfinder is not currently overriding any turtle functions.", 2)
+      self.Position = pos2 -- set current position
+
+      -- Determine facing based off of what direction we moved.
+      if pos2[1] > pos[1] then
+        -- facing positive X
+        self.Facing = 3
+      elseif pos2[3] > pos[3] then
+        -- facing positive Z
+        self.Facing = 0
+      elseif pos2[1] < pos[1] then
+        -- facing negative X
+        self.Facing = 1
+      else
+        -- facing negative Z
+        self.Facing = 2
+      end
+      return true
+    end
+  end
+
+  return false, "Unknown error occured."
+end
+
+function index:Face(direction)
+  CheckSelf(self)
+  expect(1, direction, "number")
+
+  if direction < 0 or direction > 3 or direction % 1 ~= 0 then
+    error("Bad argument #1: Expected integer in range 0-3", 2)
+  end
+
+  if facing == direction then return end
+
+  if (facing + 1) % 4 == direction then
+    self:TurnRight()
+  else
+    while facing ~= direction do
+      self:TurnLeft()
     end
   end
 end
+
+function index:MoveTo(x, y, z)
+  CheckSelf(self)
+  expect(1, x, "number")
+  expect(2, y, "number")
+  expect(3, z, "number")
+
+  -- This subfunction will attack and dig when movement fails, if allowed
+  -- if neither are allowed, will error.
+  local function ensure(movement, attack, dig)
+    local ok, err = movement(self)
+    if not ok then
+      if movement == self.Back then
+        self:TurnRight()
+        self:TurnRight()
+      end
+
+      if self.CanAttack then
+        attack()
+      end
+      if self.CanDig then
+        dig()
+      end
+
+      if movement == self.Back then
+        self:TurnRight()
+        self:TurnRight()
+      end
+      if not canAttack and not canDig then
+        return false,
+               string.format(
+                 "Failed to move, and not allowed to attack or dig: %s",
+                 err
+               )
+      end
+    end
+
+    return ok, err
+  end
+
+  -- Align to X axis
+  while self.Position[1] ~= x do
+    local d = self.Forward
+    if self.Position[1] > x then -- face -x
+      if self.ForceForward or self.Facing ~= 3 then
+        self:Face(1)
+      else
+        d = self.Back
+      end
+    else -- face +x
+      if self.ForceForward or self.Facing ~= 1 then
+        self:Face(3)
+      else
+        d = self.Back
+      end
+    end
+    local ok, err = ensure(d, turtle.attack, turtle.dig)
+    if not ok then return ok, err end
+  end
+
+  -- Align to Y axis
+  while self.Position[2] ~= y do
+    local ok, err
+    if self.Position[2] > y then -- go down
+      ok, err = ensure(self.Down, turtle.attackDown, turtle.digDown)
+    else
+      ok, err = ensure(self.Up, turtle.attackUp, turtle.digUp)
+    end
+
+    if not ok then return ok, err end
+  end
+
+  -- Align to Z axis
+  while self.Position[3] ~= z do
+    local ok, err
+    local d = self.Forward
+    if self.Position[3] > z then -- face -z
+      if self.ForceForward or self.Facing ~= 0 then
+        self:Face(2)
+      else
+        d = self.Back
+      end
+    else -- face +z
+      if self.ForceForward or self.Facing ~= 2 then
+        self:Face(0)
+      else
+        d = self:Back
+      end
+    end
+    local ok, err = ensure(d, turtle.attack, turtle.dig)
+    if not ok then return ok, err end
+  end
+
+  return true
+end
+
+function index:FollowPath(path)
+  CheckSelf(self)
+  expect(1, path, "table")
+
+  for i = 1, #path do
+    self:MoveTo(path[i].X, path[i].Y, path[i].Z)
+  end
+end
+
+function index:GetPosition()
+  CheckSelf(self)
+  return self.Position[1], self.Position[2], self.Position[3]
+end
+
+function index:GetFacing()
+  CheckSelf(self)
+  return self.Facing
+end
+
+function module.new(Pathfinder)
+  return setmetatable(
+    {
+      Pathfinder = Pathfinder,
+      Position = {0, 0, 0},
+      Facing = 0,
+      CanAttack = false,
+      CanDig = false,
+      ForceForward = false,
+      _ISTURTLEUTIL = true
+    },
+    mt
+  )
+end
+
+return module
