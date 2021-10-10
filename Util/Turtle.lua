@@ -2,26 +2,32 @@
 local expect = require "cc.expect".expect
 
 local offsets = {
-  [0] = { 0, 0, 1},
-  [1] = {-1, 0, 0},
-  [2] = { 0, 0,-1},
-  [3] = { 1, 0, 0}
+  [0] = { 0, 0,-1},
+  [1] = { 1, 0, 0},
+  [2] = { 0, 0, 1},
+  [3] = {-1, 0, 0}
 }
 
 local function AddOffsets(position, facing)
+  expect(1, position, "table")
+  expect(2, facing, "number")
   return position[1] + offsets[facing][1],
          position[2] + offsets[facing][2],
          position[3] + offsets[facing][3]
 end
 local function SubOffsets(position, facing)
+  expect(1, position, "table")
+  expect(2, facing, "number")
   return position[1] - offsets[facing][1],
          position[2] - offsets[facing][2],
          position[3] - offsets[facing][3]
 end
 local function AddUp(position)
+  expect(1, position, "table")
   return position[1], position[2] + 1, position[3]
 end
 local function AddDown(position)
+  expect(1, position, "table")
   return position[1], position[2] - 1, position[3]
 end
 
@@ -47,19 +53,19 @@ function index:TurtleScan()
   CheckSelf(self)
 
   if turtle.detect() then
-    self.Pathfinder:AddObstacle(AddOffsets())
+    self.Pathfinder:AddObstacle(AddOffsets(self.Position, self.Facing))
   else
-    self.Pathfinder:AddAir(AddOffsets())
+    self.Pathfinder:AddAir(AddOffsets(self.Position, self.Facing))
   end
   if turtle.detectDown() then
-    self.Pathfinder:AddObstacle(AddDown())
+    self.Pathfinder:AddObstacle(AddDown(self.Position))
   else
-    self.Pathfinder:AddAir(AddDown())
+    self.Pathfinder:AddAir(AddDown(self.Position))
   end
   if turtle.detectUp() then
-    self.Pathfinder:AddObstacle(AddUp())
+    self.Pathfinder:AddObstacle(AddUp(self.Position))
   else
-    self.Pathfinder:AddAir(AddUp())
+    self.Pathfinder:AddAir(AddUp(self.Position))
   end
 end
 
@@ -67,7 +73,7 @@ function index:Forward()
   CheckSelf(self)
   local ok, err = turtle.forward()
   if ok then
-    self.Position = {AddOffsets(self.Position)}
+    self.Position = {AddOffsets(self.Position, self.Facing)}
   end
 
   self:TurtleScan()
@@ -79,7 +85,7 @@ function index:Back()
   CheckSelf(self)
   local ok, err = turtle.back()
   if ok then
-    self.Position = {SubOffsets(self.Position)}
+    self.Position = {SubOffsets(self.Position, self.Facing)}
   end
 
   self:TurtleScan()
@@ -139,7 +145,7 @@ function index:Dig()
   CheckSelf(self)
   local ok, err = turtle.dig()
   if ok then
-    self.Pathfinder:AddAir(AddOffsets(self.Position))
+    self.Pathfinder:AddAir(AddOffsets(self.Position, self.Facing))
   end
 
   return ok, err
@@ -168,6 +174,7 @@ end
 function index:Locate()
   CheckSelf(self)
   local pos = {floorLocate()}
+  print("Initial given location:", pos[1], pos[2], pos[3])
 
   if not pos[1] then
     return false, "GPS failure."
@@ -220,16 +227,16 @@ function index:Locate()
       -- Determine facing based off of what direction we moved.
       if pos2[1] > pos[1] then
         -- facing positive X
-        self.Facing = 3
+        self.Facing = 1
       elseif pos2[3] > pos[3] then
         -- facing positive Z
-        self.Facing = 0
+        self.Facing = 2
       elseif pos2[1] < pos[1] then
         -- facing negative X
-        self.Facing = 1
+        self.Facing = 3
       else
         -- facing negative Z
-        self.Facing = 2
+        self.Facing = 0
       end
       return true
     end
@@ -246,12 +253,12 @@ function index:Face(direction)
     error("Bad argument #1: Expected integer in range 0-3", 2)
   end
 
-  if facing == direction then return end
+  if self.Facing == direction then return end
 
-  if (facing + 1) % 4 == direction then
+  if (self.Facing + 1) % 4 == direction then
     self:TurnRight()
   else
-    while facing ~= direction do
+    while self.Facing ~= direction do
       self:TurnLeft()
     end
   end
@@ -262,13 +269,15 @@ function index:MoveTo(x, y, z)
   expect(1, x, "number")
   expect(2, y, "number")
   expect(3, z, "number")
+  print("GOTO:", x, y, z)
+  print("FROM:", self.Position[1], self.Position[2], self.Position[3])
 
   -- This subfunction will attack and dig when movement fails, if allowed
   -- if neither are allowed, will error.
   local function ensure(movement, attack, dig)
     local ok, err = movement(self)
     if not ok then
-      if movement == self.Back then
+      if movement == self.Back and (self.CanAttack or self.CanDig) then
         self:TurnRight()
         self:TurnRight()
       end
@@ -280,7 +289,7 @@ function index:MoveTo(x, y, z)
         dig()
       end
 
-      if movement == self.Back then
+      if movement == self.Back and (self.CanAttack or self.CanDig) then
         self:TurnRight()
         self:TurnRight()
       end
@@ -300,16 +309,16 @@ function index:MoveTo(x, y, z)
   while self.Position[1] ~= x do
     local d = self.Forward
     if self.Position[1] > x then -- face -x
-      if self.ForceForward or self.Facing ~= 3 then
-        self:Face(1)
-      else
+      if not self.ForceForward and self.Facing == 1 then
         d = self.Back
+      else
+        self:Face(3)
       end
     else -- face +x
-      if self.ForceForward or self.Facing ~= 1 then
-        self:Face(3)
-      else
+      if not self.ForceForward and self.Facing == 3 then
         d = self.Back
+      else
+        self:Face(1)
       end
     end
     local ok, err = ensure(d, turtle.attack, turtle.dig)
@@ -333,16 +342,16 @@ function index:MoveTo(x, y, z)
     local ok, err
     local d = self.Forward
     if self.Position[3] > z then -- face -z
-      if self.ForceForward or self.Facing ~= 0 then
-        self:Face(2)
-      else
+      if not self.ForceForward and self.Facing == 2 then
         d = self.Back
+      else
+        self:Face(0)
       end
     else -- face +z
-      if self.ForceForward or self.Facing ~= 2 then
-        self:Face(0)
+      if not self.ForceForward and self.Facing == 0 then
+        d = self.Back
       else
-        d = self:Back
+        self:Face(2)
       end
     end
     local ok, err = ensure(d, turtle.attack, turtle.dig)
@@ -355,6 +364,8 @@ end
 function index:FollowPath(path)
   CheckSelf(self)
   expect(1, path, "table")
+  local dh = io.open("debug.txt", 'w')
+  dh:write(textutils.serialize(path)):close()
 
   for i = 1, #path do
     self:MoveTo(path[i].X, path[i].Y, path[i].Z)
