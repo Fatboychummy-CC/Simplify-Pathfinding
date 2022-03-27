@@ -96,6 +96,12 @@ function M.create()
     expect(4, canAttackMobs, "boolean", "nil")
     expect(5, canGoBack, "boolean", "nil")
     startIndex = startIndex or 1
+
+    for index, success, newPosition in Path.iteratePath(path, trackingTurtle, startIndex, canBreakBlocks, canAttackMobs, canGoBack) do
+      if not success then return false end
+    end
+
+    return true
   end
 
   --- Get the Map object associated with this pathfinder object.
