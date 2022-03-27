@@ -22,7 +22,36 @@ local M = {}
 --- Create a new Pathfinder object.
 -- @treturn table The pathfinder object.
 function M.create()
+  -- create all of the objects we will need.
+  local map = Map.create()
+  local path = Path.create()
+  local trackingTurtle = TrackingTurtle.create()
 
+  -- create the returned object
+  local pathfinder = {}
+
+  -- TODO: Document these, too tired tonight.
+  function pathfinder.scanUsing(...)
+
+  end
+
+  function pathfinder.pathfind(coordinateA, coordinateB, initialFacing)
+
+  end
+
+  function pathfinder.getMap()
+    return map
+  end
+
+  function pathfinder.getPathfinder()
+    return path
+  end
+
+  function pathfinder.getTrackingTurtle()
+    return trackingTurtle
+  end
+
+  return pathfinder
 end
 
 --- Load a pathfinder object from a file.
