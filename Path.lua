@@ -2,6 +2,9 @@
 -- This module is responsible for checking and pathfinding along the map passed to it.
 -- @module[kind=pathfind] Path
 
+-- cc module includes
+local expect = require "cc.expect".expect
+
 local Path = {}
 
 --- Pathfind from one location to another, using the A* method.
@@ -29,10 +32,11 @@ end
 --- Create an iterator that will move a turtle along a path.
 -- This allows you to use a for loop and complete some action for every movement.
 -- @tparam table path The path to follow.
--- @tparam table turtle The turtle object to use. This expects a turtle object in the format of the TrackingTurtle, which has the extra methods '.getPosition()' and '.getFacing()'
-function Path.iteratePath(path, turtle)
+-- @tparam table tu The turtle object to use. This expects a turtle object in the format of the TrackingTurtle, which has the extra methods '.getPosition()' and '.getFacing()'
+-- @treturn function(boolean, boolean, boolean) Iterator which will move the turtle along the path, then return after each move.
+function Path.iteratePath(path, tu)
   expect(1, path, "table")
-  expect(2, turtle, "table")
+  expect(2, tu, "table")
 end
 
 return Path
