@@ -1,2 +1,3 @@
 --- 3D map of the environment.
 -- This module is responsible for holding and manipulating a 3D map of the currently known environment.
+-- @module[kind=pathfind] Map
