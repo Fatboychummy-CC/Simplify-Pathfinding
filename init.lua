@@ -75,8 +75,8 @@ function M.create()
   function pathfinder.followPath(path, canBreakBlocks, canAttackMobs, canGoBack)
     expect(1, path, "table")
     expect(2, canBreakBlocks, "boolean", "nil")
-    expect(2, canAttackMobs, "boolean", "nil")
-    expect(2, canGoBack, "boolean", "nil")
+    expect(3, canAttackMobs, "boolean", "nil")
+    expect(4, canGoBack, "boolean", "nil")
   end
 
   --- Get the Map object associated with this pathfinder object.
