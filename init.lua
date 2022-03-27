@@ -14,6 +14,7 @@ end
 -- Include all of the required files.
 local Map = _require "Map"
 local Path = _require "Path"
+local TrackingTurtle = _require "TrackingTurtle"
 
 -- Create our module
 local M = {}
