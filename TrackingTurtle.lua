@@ -117,7 +117,7 @@ function tTurtle.create(blockTurtleAccess)
     end
   end
 
-  return obj
+  return setmetatable(obj, {__index = tTurtle})
 end
 
 --- Return the position the turtle would move to if moving in facing direction.
@@ -184,4 +184,4 @@ function tTurtle.getFacingToBlock(x1, y1, z1, x2, y2, z2)
   return -1
 end
 
-return tTurtle
+return setmetatable(tTurtle, {__index = turtle})
