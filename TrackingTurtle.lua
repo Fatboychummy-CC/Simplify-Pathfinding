@@ -149,4 +149,39 @@ function tTurtle.getNextPosition(x, y, z, facing)
   error(string.format("Unknown facing: %d", facing), 2)
 end
 
+--- Determine which direction the turtle needs to move.
+-- NOTE: This function expects that the inputted blocks will be directly beside
+-- eachother, so there may be unexpected results if they are not side-by-side.
+-- @tparam x1 The starting x position.
+-- @tparam y1 The starting y position.
+-- @tparam z1 The starting z position.
+-- @tparam x2 The desired x position.
+-- @tparam y2 The desired y position.
+-- @tparam z2 The desired z position.
+-- @treturn number The facing to get to the block. Returns 4 for "up", and 5 for "down". Returns -1 if the desired block is the same as the starting block.
+function tTurtle.getFacingToBlock(x1, y1, z1, x2, y2, z2)
+  expect(1, x1, "number")
+  expect(2, y1, "number")
+  expect(3, z1, "number")
+  expect(4, x2, "number")
+  expect(5, y2, "number")
+  expect(6, z2, "number")
+
+  if z2 < z1 then -- +Z (north)
+    return 0
+  elseif x2 > x1 then -- +X (east)
+    return 1
+  elseif z2 < z1 then -- -Z (south)
+    return 2
+  elseif x2 < x1 then -- -X (west)
+    return 3
+  elseif y2 > y1 then -- +Y (up)
+    return 4
+  elseif y2 < y1 then -- -Y (down)
+    return 5
+  end
+
+  return -1
+end
+
 return tTurtle
