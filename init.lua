@@ -50,6 +50,22 @@ function M.create()
     offsetz = offsetz or 0
   end
 
+  --- Sets a function which is run after every movement.
+  -- This is useful for scanning! Set this to a function which scans the area then passes that to pathfinder.scan.
+  -- Acts as a passthrough for TrackingTurtle.setMovementFunction
+  -- @tparam function|nil f The function to run after each movement.
+  function pathfinder.setMovementFunction(f)
+    expect(1, f, "function", "nil")
+    TrackingTurtle.setMovementFunction(f)
+  end
+
+  --- Get the current movement function.
+  -- Acts as a passthrough for TrackingTurtle.getMovementFunction
+  -- @treturn function|nil The function which is being run after each movement.
+  function pathfinder.getMovementFunction()
+    return TrackingTurtle.getMovementFunction()
+  end
+
   --- Pathfind from one position to another.
   -- @tparam number x1 The starting X coordinate.
   -- @tparam number y1 The starting Y coordinate.
