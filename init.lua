@@ -89,6 +89,7 @@ function M.create()
   -- @tparam boolean canBreakBlocks Enable if the turtle can break blocks.
   -- @tparam boolean canAttackMobs Enable if the turtle can attack mobs that get in the way.
   -- @tparam boolean canGoBack Enable if the turtle should optimize it's movements by moving backwards if needed.
+  -- @treturn boolean, number? Whether or not pathfinding was successful. On failure, also returns the index the movement failed at.
   function pathfinder.followPath(path, startIndex, canBreakBlocks, canAttackMobs, canGoBack)
     expect(1, path, "table")
     expect(2, startIndex, "number", "nil")
@@ -98,7 +99,7 @@ function M.create()
     startIndex = startIndex or 1
 
     for index, success, newPosition in Path.iteratePath(path, trackingTurtle, startIndex, canBreakBlocks, canAttackMobs, canGoBack) do
-      if not success then return false end
+      if not success then return false, index end
     end
 
     return true
