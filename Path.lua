@@ -22,7 +22,7 @@ end
 --- Create an iterator that will move a turtle along a path.
 -- This allows you to use a for loop and complete some action for every movement.
 -- @tparam table path The path to follow.
--- @tparam table turtle The turtle object to use. This expects a turtle object in the format of the TrackingTurtle, which have the extra methods '.getPosition()' and '.getLocation()'
+-- @tparam table turtle The turtle object to use. This expects a turtle object in the format of the TrackingTurtle, which have the extra methods '.getPosition()' and '.getFacing()'
 function Path.iteratePath(path, turtle)
 
 end
