@@ -45,7 +45,7 @@ function tTurtle.create(blockTurtleAccess)
     return ok, res
   end
 
-  local tDown = turtle.downs
+  local tDown = turtle.down
   function obj.down()
     local ok, res = tDown()
     if ok then
