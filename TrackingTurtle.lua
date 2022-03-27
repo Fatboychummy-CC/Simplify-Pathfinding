@@ -48,6 +48,12 @@ function tTurtle.create(blockTurtleAccess)
 
   end
 
+  --- Turn the turtle to face in a specific direction.
+  -- @tparam number direction The direction to face
+  function obj.face(direction)
+
+  end
+
   --- Get the direction the turtle is facing.
   -- @treturn number The direction the turtle is facing. 0=north(-Z), 1=east(+X), 2=south(+Z), 3=west(-X).
   function obj.getFacing()
