@@ -77,4 +77,33 @@ function tTurtle.create(blockTurtleAccess)
   return obj
 end
 
+--- Return the position the turtle would move to if moving in facing direction.
+-- use 4 for up, and 5 for down.
+-- @tparam number x The starting x position.
+-- @tparam number y The starting y position.
+-- @tparam number z The starting z position.
+-- @tparam number facing The facing of the turtle.
+function tTurtle.getNextPosition(x, y, z, facing)
+  expect(1, x, "number")
+  expect(2, y, "number")
+  expect(3, z, "number")
+  expect(4, facing, "number")
+
+  if facing == 0 then -- facing -z (north)
+    return x, y, z - 1
+  elseif facing == 1 then -- facing +x (east)
+    return x + 1, y, z
+  elseif facing == 2 then -- facing +z (south)
+    return x, y, z + 1
+  elseif facing == 3 then -- facing -x (west)
+    return x - 1, y, z
+  elseif facing == 4 then -- going up
+    return x, y + 1, z
+  elseif facing == 5 then -- going down
+    return x, y - 1, z
+  end
+
+  error(string.format("Unknown facing: %d", facing), 2)
+end
+
 return tTurtle
