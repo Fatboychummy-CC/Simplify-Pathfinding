@@ -16,7 +16,14 @@ local Path = {}
 -- @TODO Add a way to offset the costs so more efficient and slow/more sloppy but fast pathfinding can occur.
 -- @treturn boolean,table? Whether the pathfinding was successful, and the path itself (if one was found).
 function Path.astar(map, x1, y1, z1, x2, y2, z2, maxDepth)
-
+  expect(1, map, "table")
+  expect(2, x1, "number")
+  expect(3, y1, "number")
+  expect(4, z1, "number")
+  expect(5, x2, "number")
+  expect(6, y2, "number")
+  expect(7, z2, "number")
+  expect(8, maxDepth, "number", "nil")
 end
 
 --- Create an iterator that will move a turtle along a path.
@@ -24,7 +31,8 @@ end
 -- @tparam table path The path to follow.
 -- @tparam table turtle The turtle object to use. This expects a turtle object in the format of the TrackingTurtle, which has the extra methods '.getPosition()' and '.getFacing()'
 function Path.iteratePath(path, turtle)
-
+  expect(1, path, "table")
+  expect(2, turtle, "table")
 end
 
 return Path
