@@ -15,6 +15,7 @@ end
 local Map = _require "Map"
 local Path = _require "Path"
 local TrackingTurtle = _require "TrackingTurtle"
+local DontStop = _require "data.DontStopMovement"
 
 -- Create our module
 local M = {}
