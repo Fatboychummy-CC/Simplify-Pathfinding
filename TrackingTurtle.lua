@@ -4,6 +4,9 @@
 -- location.
 -- @module[kind=pathfind] TrackingTurtle
 
+-- CC module includes
+local expect = require "cc.expect".expect
+
 local tTurtle = {}
 
 --- Create a new TrackingTurtle object.
@@ -12,34 +15,61 @@ local tTurtle = {}
 function tTurtle.create(blockTurtleAccess)
   local obj = {}
 
+  local position = {0,0,0}
+  local facing = 0
+
   local tForward = turtle.forward
   function obj.forward()
-
+    local ok, res = tForward()
+    if ok then
+      position = {tTurtle.getNextPosition(position[1], position[2], position[3], facing)}
+    end
+    return ok, res
   end
 
   local tBack = turtle.back
   function obj.back()
-
+    local ok, res = tBack()
+    if ok then
+      position = {tTurtle.getNextPosition(position[1], position[2], position[3], (facing + 2) % 4)}
+    end
+    return ok, res
   end
 
   local tUp = turtle.up
   function obj.up()
-
+    local ok, res = tUp()
+    if ok then
+      position = {tTurtle.getNextPosition(position[1], position[2], position[3], 5)}
+    end
+    return ok, res
   end
 
-  local tDown = turtle.down
+  local tDown = turtle.downs
   function obj.down()
-
+    local ok, res = tDown()
+    if ok then
+      position = {tTurtle.getNextPosition(position[1], position[2], position[3], 6)}
+    end
+    return ok, res
   end
 
   local tTurnLeft = turtle.turnLeft
   function obj.turnLeft()
-
+    local ok, res = tTurnLeft()
+    if ok then
+      facing = (facing - 1) % 4
+    end
+    return ok, res
   end
 
   local tTurnRight = turtle.turnRight
   function obj.turnRight()
-
+    local ok, res = tTurnRight()
+    if ok then
+      facing = (facing + 1) % 4
+    end
+    return ok, res
   end
 
   --- Locate and determine facing of this turtle.
@@ -51,19 +81,32 @@ function tTurtle.create(blockTurtleAccess)
   --- Turn the turtle to face in a specific direction.
   -- @tparam number direction The direction to face
   function obj.face(direction)
+    expect(1, direction, "number")
+    if direction < 0 or direction > 3 or direction % 1 ~= 0 then
+      error("Expected integer from 0-3.", 2)
+    end
 
+    local turnDir = obj.turnLeft
+
+    if (facing + 1) % 4 == direction then
+      turnDir = obj.turnRight
+    end
+
+    while facing ~= direction do
+      turnDir()
+    end
   end
 
   --- Get the direction the turtle is facing.
   -- @treturn number The direction the turtle is facing. 0=north(-Z), 1=east(+X), 2=south(+Z), 3=west(-X).
   function obj.getFacing()
-
+    return facing
   end
 
   --- Get the position of this turtle.
   -- @treturn number,number,number The position of this turtle.
   function obj.getPosition()
-
+    return table.unpack(position, 1, 3)
   end
 
   if blockTurtleAccess then
