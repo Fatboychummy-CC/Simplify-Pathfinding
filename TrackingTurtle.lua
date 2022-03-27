@@ -17,12 +17,16 @@ function tTurtle.create(blockTurtleAccess)
 
   local position = {0,0,0}
   local facing = 0
+  local movementFunction
 
   local tForward = turtle.forward
   function obj.forward()
     local ok, res = tForward()
     if ok then
       position = {tTurtle.getNextPosition(position[1], position[2], position[3], facing)}
+      if movementFunction then
+        movementFunction()
+      end
     end
     return ok, res
   end
@@ -32,6 +36,9 @@ function tTurtle.create(blockTurtleAccess)
     local ok, res = tBack()
     if ok then
       position = {tTurtle.getNextPosition(position[1], position[2], position[3], (facing + 2) % 4)}
+      if movementFunction then
+        movementFunction()
+      end
     end
     return ok, res
   end
@@ -41,6 +48,9 @@ function tTurtle.create(blockTurtleAccess)
     local ok, res = tUp()
     if ok then
       position = {tTurtle.getNextPosition(position[1], position[2], position[3], 5)}
+      if movementFunction then
+        movementFunction()
+      end
     end
     return ok, res
   end
@@ -50,6 +60,9 @@ function tTurtle.create(blockTurtleAccess)
     local ok, res = tDown()
     if ok then
       position = {tTurtle.getNextPosition(position[1], position[2], position[3], 6)}
+      if movementFunction then
+        movementFunction()
+      end
     end
     return ok, res
   end
@@ -76,6 +89,20 @@ function tTurtle.create(blockTurtleAccess)
   -- @treturn boolean Whether or not the turtle could determine its location and facing.
   function obj.locate()
 
+  end
+
+  --- Set the movement function
+  -- @tparam function|nil f The function to set (or nil to clear it).
+  function obj.setMovementFunction(f)
+    expect(1, f, "function", "nil")
+
+    movementFunction = f
+  end
+
+  --- Get the movement function
+  -- @treturn function|nil
+  function obj.getMovementFunction()
+    return movementFunction
   end
 
   --- Turn the turtle to face in a specific direction.
