@@ -100,7 +100,7 @@ function tTurtle.create(blockTurtleAccess)
   end
 
   --- Get the movement function
-  -- @treturn function|nil
+  -- @treturn function|nil The movement function, or nil if unset.
   function obj.getMovementFunction()
     return movementFunction
   end

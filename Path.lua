@@ -35,7 +35,7 @@ end
 -- @tparam table tu The turtle object to use. This expects a turtle object in the format of the TrackingTurtle, which has the extra methods '.getPosition()' and '.getFacing()'
 -- @tparam number start The index to start movement at. Useful if you need to continue following a path after aborting for whatever reason.
 -- @treturn function(boolean, boolean, boolean) Iterator which will move the turtle along the path, then return after each move.
-function Path.iteratePath(path, tu, start)
+function Path.iteratePath(path, tu, start, canDig, canAttack, canGoBack)
   expect(1, path, "table")
   expect(2, tu, "table")
   expect(3, start, "number")
@@ -45,7 +45,7 @@ function Path.iteratePath(path, tu, start)
   -- @tparam canDig Whether the turtle can dig blocks.
   -- @tparam canAttack Whether the turtle can attack mobs in the way.
   -- @tparam canGoBack Whether to optimize movement so that the turtle can move backwards too.
-  return function(canDig, canAttack, canGoBack)
+  return function()
     i = i + 1
     if not path[i] then return end -- detect the end of the path.
 
