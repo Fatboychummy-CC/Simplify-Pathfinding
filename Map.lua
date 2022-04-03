@@ -5,7 +5,7 @@
 
 -- Get the prefix to be used for requiring submodules.
 -- This allows this folder to be named anything.
-local prefix = ... .. "."
+local prefix = (...):match("(.+)%.") .. "."
 
 -- Include CC modules
 local expect = require "cc.expect".expect
