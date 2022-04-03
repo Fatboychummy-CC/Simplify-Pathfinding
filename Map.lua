@@ -42,6 +42,16 @@ function Map.create()
       -- return the node
       return Y[z]
     end,
+
+    --- Mark a node as an obstacle.
+    -- Marks a node as an obstacle. ie: A block the pathfinder will not try to go through.
+    -- @tparam self Map The map object to operate on.
+    -- @tparam x The X coordinate.
+    -- @tparam y The Y coordinate.
+    -- @tparam z The Z coordinate.
+    MarkObstacle = function(self, x, y, z)
+      self:Get(x, y, z).obstacle = true
+    end
   }
 end
 
