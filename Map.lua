@@ -13,6 +13,23 @@ local expect = require "cc.expect".expect
 -- Other needed modules
 local Node = require(prefix .. "Node")
 
+-- localized math functions
+local min = math.min
+local max = math.max
+
+-- "Globals"
+local VERSION = 1
+
+local FLAGS = {
+  NONE             = 0,
+  MULTI_FILE       = 1,
+  LAST_MAP         = 2,
+  LARGE_MAP        = 4,
+  HUGE_MAP         = 8,
+  DETAILED_DATA    = 16,
+  IGNORE_OBSTACLES = 32
+}
+
 local Map = {}
 
 --- Create a new Map object.
@@ -80,13 +97,77 @@ function Map.load(filename)
   expect(1, filename, "string")
 end
 
+local function proxyStringValue(v)
+  return setmetatable(
+    {v, Set = function(self, v) self.v = v end},
+    {__tostring = function(self) return self.v end}
+  )
+end
+
+local function packUByte(n)
+  return string.pack("<B", n)
+end
+
 --- Save a map object to a file.
 -- @tparam string filename The file to save to, in absolute form.
 -- @tparam table map The map object that was created via either create or load.
+-- @tparam function multifileFunc If the map becomes too large, it may need to save to a disk drive. If this is the case, supply a function which will determine the next location to save to.
 -- @treturn boolean Whether saving the file[s] was successful or not.
-function Map.save(filename, map)
+function Map.save(filename, map, multifileFunc)
   expect(1, filename, "string")
   expect(1, map, "table")
+
+  -- writing table ie: all bytes to be written.
+  local writing = {}
+
+  local function insert(i, v)
+    writing[i].n = writing[i].n + 1
+    writing[i][writing[i].n] = v
+  end
+
+  -- Preprocess the map. We need to know the following information:
+  --   1. The largest value (positive or negative), so we can determine if we need to increase size of written numbers.
+  --   2. How much of each type of node run there will be, so we can determine if we are saving blocked or unblocked nodes.
+  --   3. How much space we are going to take up with this single map, so we can determine if we need to split (and how many files to split into).
+
+  local minimum = 0
+  local maximum = 0
+  local totalBlockedNodeRuns = 0
+  local totalUnblockedNodeRuns = 0
+  local last = false
+  local first = true
+  for x, Y in pairs(map.nodes) do
+    minimum = min(minimum, x)
+    maximum = max(maximum, x)
+    for y, Z in pairs(Y) do
+      minimum = min(minimum, y)
+      maximum = max(maximum, y)
+      for z, node in pairs(Z) do
+        minimum = min(minimum, z)
+        maximum = max(maximum, z)
+        -- if node type changed...
+        if last ~= node.blocked then
+          -- and this is not the first check
+          if not first then
+            -- increment the corresponding node run type.
+            if last then
+              totalBlockedNodeRuns = totalBlockedNodeRuns + 1
+            else
+              totalUnblockedNodeRuns = totalUnblockedNodeRuns + 1
+            end
+          end
+
+          -- change the last node to the current node.
+          last = node.blocked
+        end
+
+        -- note that the first node has been checked.
+        first = false
+      end
+    end
+  end
+
+
 end
 
 return Map
