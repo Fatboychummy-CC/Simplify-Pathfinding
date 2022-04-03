@@ -20,6 +20,7 @@ local Map = {}
 function Map.create()
   -- @type Map
   return {
+    nodes = {}
     --- Get a node.
     -- Get a node at position x, y, z. If the node does not exist, a new one will be created.
     -- @tparam self Map The map object to operate on.
@@ -30,8 +31,8 @@ function Map.create()
     -- @usage local node = Map:Get(x, y, z)
     Get = function(self, x, y, z)
       -- check if X axis exists
-      if not self[x] then self[x] = {} end
-      local X = self[x]
+      if not self.nodes[x] then self.nodes[x] = {} end
+      local X = self.nodes[x]
 
       -- check if Y axis exists
       if not X[y] then X[y] = {} end
@@ -64,7 +65,11 @@ function Map.create()
     -- @usage Map:MarkUnblocked(x, y, z)
     MarkUnblocked = function(self, x, y, z)
       self:Get(x, y, z).blocked = false
-    end
+    end,
+
+    xOffset = 0,
+    yOffset = 0,
+    zOffset = 0
   }
 end
 
