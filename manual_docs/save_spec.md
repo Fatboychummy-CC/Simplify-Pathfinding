@@ -36,7 +36,7 @@ future. The following list shows what each flag does currently.
 2:  LargeMap        - not yet implemented
 3:  HugeMap         - not yet implemented
 4:  DetailedData    - not yet implemented
-5:  IgnoreObstacles - not yet implemented
+5:  SaveBlocked     - not yet implemented
 6:  Reserved for future use.
 7:  Reserved for future use.
 8:  Reserved for future use.
@@ -81,7 +81,7 @@ This flag is more-so used for debugging purposes and should not be used in a
 production environment. This will cause each run to contain a byte holding a
 1 (this is an obstacle) or 0 (this is an air block).
 
-##### IgnoreObstacles
+##### SaveBlocked
 The map save system will generate runs for both obstacles and air blocks.
 However, it will only save the obstacles or the air blocks. If this flag is not
 set, it means that this file should contain air blocks only. If this flag is
@@ -104,7 +104,7 @@ This assumes we are using a normal-sized map (1-byte signed integer for each x,
 y, z value).
 
 ```
-0 --------- 1 --------- 2 --------- 3 --------- 4 --------- 5 --------- 6 ---------------- 7
-| X-1 - int | Y-1 - int | Z-1 - int | X-2 - int | Y-2 - int | Z-2 - int | ? Obstacle? Bool
-0 --------- 1 --------- 2 --------- 3 --------- 4 --------- 5 --------- 6 ---------------- 7
+0 --------- 1 --------- 2 --------- 3 --------- 4 --------- 5 --------- 6 -------------- 7
+| X-1 - int | Y-1 - int | Z-1 - int | X-2 - int | Y-2 - int | Z-2 - int | Obstacle? Bool
+0 --------- 1 --------- 2 --------- 3 --------- 4 --------- 5 --------- 6 -------------- 7
 ```

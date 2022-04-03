@@ -21,13 +21,13 @@ local max = math.max
 local VERSION = 1
 
 local FLAGS = {
-  NONE             = 0,
-  MULTI_FILE       = 1,
-  LAST_MAP         = 2,
-  LARGE_MAP        = 4,
-  HUGE_MAP         = 8,
-  DETAILED_DATA    = 16,
-  IGNORE_OBSTACLES = 32
+  NONE          = 0,
+  MULTI_FILE    = 1,
+  LAST_MAP      = 2,
+  LARGE_MAP     = 4,
+  HUGE_MAP      = 8,
+  DETAILED_DATA = 16,
+  SAVE_BLOCKED  = 32
 }
 
 local Map = {}
