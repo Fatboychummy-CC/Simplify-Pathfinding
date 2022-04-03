@@ -1,9 +1,16 @@
 --- 3D map of the environment.
 -- This module is responsible for holding and manipulating a 3D map of the currently known environment.
--- @module[kind=pathfind] Map
+-- @module Map
+
+-- Get the prefix to be used for requiring submodules.
+-- This allows this folder to be named anything.
+local prefix = ... .. "."
 
 -- Include CC modules
 local expect = require "cc.expect".expect
+
+-- Other needed modules
+local Node = require(prefix .. "Node")
 
 local Map = {}
 

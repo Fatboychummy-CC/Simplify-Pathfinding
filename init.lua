@@ -1,6 +1,6 @@
 --- Combines submodules.
 -- This file combines all submodules into one module to tie everything together.
--- @module[kind=pathfind] Pathfinder
+-- @module Pathfinder
 
 -- Get the prefix to be used for requiring submodules.
 -- This allows this folder to be named anything.

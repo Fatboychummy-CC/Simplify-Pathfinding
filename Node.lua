@@ -1,0 +1,3 @@
+--- A node of data.
+-- A node contains all information needed to pathfind, and represents a single x,y,z position.
+-- @module Node

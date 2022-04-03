@@ -2,7 +2,7 @@
 -- This module extends the capabilities of a normal turtle by allowing it to
 -- locate itself, determine its facing, and track its movements from its initial
 -- location.
--- @module[kind=pathfind] TrackingTurtle
+-- @module TrackingTurtle
 
 -- CC module includes
 local expect = require "cc.expect".expect
