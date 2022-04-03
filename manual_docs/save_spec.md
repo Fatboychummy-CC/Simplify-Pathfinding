@@ -7,9 +7,9 @@ extra information about what all is contained in the file.
 
 ### Byte Format
 ```
-0 ------------------ 6 ------------ 8 -------------- 9 -------------- 10 -------------- 11 --------------------------------------------- 12 ------------------------- ?
-| "FATMAP" - literal | flags - bool | X Offset - int | Y Offset - int || Z Offset - int || ? Next file name length - unsigned 1-byte int || ? Next file name - string |
-0 ------------------ 6 ------------ 8 -------------- 9 -------------- 10 -------------- 11 --------------------------------------------- 12 ------------------------- ?
+0 ------------------ 6 ------------ 8 -------------------- 9 -------------- 10 -------------- 11 ---------------12---------------------------------------------- 13 ------------------------- ?
+| "FATMAP" - literal | flags - bool | Save Version - UByte | X Offset - int || Y Offset - int || Z Offset - int || ? Next file name length - unsigned 1-byte int || ? Next file name - string |
+0 ------------------ 6 ------------ 8 -------------------- 9 -------------- 10 -------------- 11 ---------------12---------------------------------------------- 13 ------------------------- ?
 ```
 
 Please note: In the above and all following byte formats, "int" type is based on
