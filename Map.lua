@@ -97,15 +97,18 @@ function Map.load(filename)
   expect(1, filename, "string")
 end
 
-local function proxyStringValue(v)
-  return setmetatable(
-    {v, Set = function(self, v) self.v = v end},
-    {__tostring = function(self) return self.v end}
-  )
-end
-
 local function packUByte(n)
   return string.pack("<B", n)
+end
+local function unpackUByte(s)
+  return string.unpack("<B", s)
+end
+
+local function proxyUByteValue(v)
+  return setmetatable(
+    {v, Set = function(self, v) self.v = v end, Get = function(self) return self.v end},
+    {__tostring = function(self) return packUByte(self.v) end}
+  )
 end
 
 --- Save a map object to a file.
@@ -124,6 +127,9 @@ function Map.save(filename, map, multifileFunc)
     writing[i].n = writing[i].n + 1
     writing[i][writing[i].n] = v
   end
+
+  local saveVersion = packUByte(VERSION)
+  local baseFlags = proxyUByteValue(0)
 
   -- Preprocess the map. We need to know the following information:
   --   1. The largest value (positive or negative), so we can determine if we need to increase size of written numbers.
@@ -167,7 +173,19 @@ function Map.save(filename, map, multifileFunc)
     end
   end
 
-
+  -- determine the flags that we will be using.
+  if totalBlockedNodeRuns < totalUnblockedNodeRuns then
+    baseFlags:Set(baseFlags:Get() + FLAGS.SAVE_BLOCKED)
+  end
+  if minimum < -32768 then
+    baseFlags:Set(baseFlags:Get() + FLAGS.HUGE_MAP)
+  elseif maximum > 32767 then
+    baseFlags:Set(baseFlags:Get() + FLAGS.HUGE_MAP)
+  elseif minimum < -128 then
+    baseFlags:Set(baseFlags:Get() + FLAGS.LARGE_MAP)
+  elseif maximum > 127 then
+    baseFlags:Set(baseFlags:Get() + FLAGS.LARGE_MAP)
+  end
 end
 
 return Map
