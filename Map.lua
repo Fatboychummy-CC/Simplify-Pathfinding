@@ -55,8 +55,8 @@ function Map.create()
       self:Get(x, y, z).blocked = true
     end,
 
-    --- Mark a node as an obstacle.
-    -- Marks a node as an obstacle. ie: A block the pathfinder will not try to go through.
+    --- Mark a node as cleared.
+    -- Marks a node as an cleared. ie: A block the pathfinder will try to go through.
     -- @tparam self Map The map object to operate on.
     -- @tparam x The X coordinate.
     -- @tparam y The Y coordinate.
