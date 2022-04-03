@@ -1,5 +1,6 @@
 --- A node of data.
 -- A node contains all information needed to pathfind, and represents a single x,y,z position.
+-- WARNING: All node object methods do not check input types, as an optimization to make pathfinding faster.
 -- @module Node
 
 -- Include CC modules

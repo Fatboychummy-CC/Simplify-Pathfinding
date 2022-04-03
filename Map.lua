@@ -1,5 +1,6 @@
 --- 3D map of the environment.
 -- This module is responsible for holding and manipulating a 3D map of the currently known environment.
+-- WARNING: All map object methods do not check input types, as an optimization to make pathfinding faster.
 -- @module Map
 
 -- Get the prefix to be used for requiring submodules.
@@ -15,9 +16,14 @@ local Node = require(prefix .. "Node")
 local Map = {}
 
 --- Create a new Map object.
--- @treturn table The map object
+-- @treturn Map The map object
 function Map.create()
+  -- @type Map
+  return {
+    Get = function(x, y, z)
 
+    end,
+  }
 end
 
 --- Load a map object from a file.
