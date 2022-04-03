@@ -29,7 +29,7 @@ function Node.create(x, y, z)
     gCost = 0,
     hCost = 0,
     fCost = 0,
-    obstacle = false,
+    blocked = true,
     --- Calculate Manhattan distance to another position.
     -- @tparam Node self The current node to operate on.
     -- @tparam number x The X coordinate to get distance to.

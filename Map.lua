@@ -27,6 +27,7 @@ function Map.create()
     -- @tparam y The Y coordinate.
     -- @tparam z The Z coordinate.
     -- @treturn Node The node grabbed.
+    -- @usage local node = Map:Get(x, y, z)
     Get = function(self, x, y, z)
       -- check if X axis exists
       if not self[x] then self[x] = {} end
@@ -49,8 +50,20 @@ function Map.create()
     -- @tparam x The X coordinate.
     -- @tparam y The Y coordinate.
     -- @tparam z The Z coordinate.
-    MarkObstacle = function(self, x, y, z)
-      self:Get(x, y, z).obstacle = true
+    -- @usage Map:MarkBlocked(x, y, z)
+    MarkBlocked = function(self, x, y, z)
+      self:Get(x, y, z).blocked = true
+    end,
+
+    --- Mark a node as an obstacle.
+    -- Marks a node as an obstacle. ie: A block the pathfinder will not try to go through.
+    -- @tparam self Map The map object to operate on.
+    -- @tparam x The X coordinate.
+    -- @tparam y The Y coordinate.
+    -- @tparam z The Z coordinate.
+    -- @usage Map:MarkUnblocked(x, y, z)
+    MarkUnblocked = function(self, x, y, z)
+      self:Get(x, y, z).blocked = false
     end
   }
 end
