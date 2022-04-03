@@ -20,8 +20,27 @@ local Map = {}
 function Map.create()
   -- @type Map
   return {
-    Get = function(x, y, z)
+    --- Get a node.
+    -- Get a node at position x, y, z. If the node does not exist, a new one will be created.
+    -- @tparam self Map The map object to operate on.
+    -- @tparam x The X coordinate.
+    -- @tparam y The Y coordinate.
+    -- @tparam z The Z coordinate.
+    -- @treturn Node The node grabbed.
+    Get = function(self, x, y, z)
+      -- check if X axis exists
+      if not self[x] then self[x] = {} end
+      local X = self[x]
 
+      -- check if Y axis exists
+      if not X[y] then X[y] = {} end
+      local Y = X[y]
+
+      -- check if the node exists
+      if not Y[z] then Y[z] = Node.create(x, y, z) end
+
+      -- return the node
+      return Y[z]
     end,
   }
 end
