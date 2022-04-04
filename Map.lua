@@ -126,18 +126,19 @@ local function proxyUByteValue(v)
 end
 
 --- Save a map object to a file.
--- @tparam string filename The file to save to, in absolute form.
--- @tparam table map The map object that was created via either create or load.
--- @tparam function multifileFunc If the map becomes too large, it may need to save to a disk drive. If this is the case, supply a function which will determine the next location to save to.
+-- @tparam Map map The map object that was created via either create or load.
+-- @tparam function fileFunc This should be an iterator function which returns the next filename in the series to save.
+-- @usage Map.save(map, function() return "map.data" end)
+-- @usage local i = 0 local files = {"file1", "file2", ...} Map.save(map, function() i = i + 1 return files[i] end)
 -- @treturn boolean Whether saving the file[s] was successful or not.
-function Map.save(filename, map, multifileFunc)
-  expect(1, filename, "string")
+function Map.save(map, fileFunc)
   expect(1, map, "table")
+  expect(2, fileFunc, "function")
 
   debug(1, "Begin map saving.")
 
   -- writing table ie: all bytes to be written.
-  local writing = {}
+  local writing = {{}}
 
   local function insert(i, v)
     debug("Insertion:", i, v)
@@ -205,11 +206,11 @@ function Map.save(filename, map, multifileFunc)
           if node.blocked ~= last then
             if node.blocked then -- store a blocked run
               blocked = blocked + 1
-              blockedRuns[blocked] = {startZ, z - 1}
+              blockedRuns[blocked] = {x, y, startZ, z - 1}
               debug(0.05, "Run end.", "blocked", startZ, z - 1)
             else -- store an unblocked run
               unblocked = unblocked + 1
-              unblockedRuns[unblocked] = {startZ, z - 1}
+              unblockedRuns[unblocked] = {x, y, startZ, z - 1}
               debug(0.05, "Run end.", "unblocked", startZ, z - 1)
             end
 
@@ -219,7 +220,7 @@ function Map.save(filename, map, multifileFunc)
         else -- "empty" nodes are treated as blocked.
           if not last then
             unblocked = unblocked + 1
-            unblockedRuns[unblocked] = {startZ, z - 1}
+            unblockedRuns[unblocked] = {x, y, startZ, z - 1}
             debug(0.05, "Run end.", "unblocked", startZ, z - 1)
 
             last = false
@@ -231,17 +232,18 @@ function Map.save(filename, map, multifileFunc)
       -- we hit the end of the line, we should save a node run.
       if Z[maxZ].blocked then -- store a blocked run
         blocked = blocked + 1
-        blockedRuns[blocked] = {startZ, maxZ}
+        blockedRuns[blocked] = {x, y, startZ, maxZ}
         debug(0.05, "Run end.", "blocked", startZ, maxZ)
       else -- store an unblocked run
         unblocked = unblocked + 1
-        unblockedRuns[unblocked] = {startZ, maxZ}
+        unblockedRuns[unblocked] = {x, y, startZ, maxZ}
         debug(0.05, "Run end.", "unblocked", startZ, maxZ)
       end
     end -- end for y
   end -- end for x
 
   -- determine the flags that we will be using.
+  local intSize = 1
   debug("Total blocked  :", blocked)
   debug("Total unblocked:", unblocked)
   debug(5, "================")
@@ -249,16 +251,40 @@ function Map.save(filename, map, multifileFunc)
     baseFlags:Set(baseFlags:Get() + FLAGS.SAVE_BLOCKED)
   end
   if minimum < -32768 then
+    intSize = 3
     baseFlags:Set(baseFlags:Get() + FLAGS.HUGE_MAP)
   elseif maximum > 32767 then
+    intSize = 3
     baseFlags:Set(baseFlags:Get() + FLAGS.HUGE_MAP)
   elseif minimum < -128 then
+    intSize = 2
     baseFlags:Set(baseFlags:Get() + FLAGS.LARGE_MAP)
   elseif maximum > 127 then
+    intSize = 2
     baseFlags:Set(baseFlags:Get() + FLAGS.LARGE_MAP)
   end
 
   debug("New flags:", baseFlags, "(", baseFlags:Get(), ")")
+
+  -- Write the information we are choosing to save to a file.
+  local packer = ("<I%d"):format(intSize)
+  local function packInt(n)
+    return string.pack(packer, n)
+  end
+
+  local function packData(list, size, isBlocked)
+    isBlocked = isBlocked and packInt(1) or packInt(0)
+    for i = 1, size do
+      local run = list[i]
+      insert(1, packInt(run[1]), packInt(run[2]), packInt(run[3]), packInt(run[4]), isBlocked)
+    end
+  end
+
+  if blocked < unblocked then
+    packData(blockedRuns, blocked)
+  else
+    packData(unblockedRuns, unblocked)
+  end
 end
 
 return Map
