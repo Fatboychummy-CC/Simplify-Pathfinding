@@ -264,6 +264,10 @@ function Map.save(map, fileFunc)
     baseFlags:Set(baseFlags:Get() + FLAGS.LARGE_MAP)
   end
 
+  if DEBUG then
+    baseFlagss:Set(baseFlags:Get() + FLAGS.DETAILED_DATA)
+  end
+
   debug("New flags:", baseFlags, "(", baseFlags:Get(), ")")
 
   -- Write the information we are choosing to save to a file.
@@ -272,18 +276,62 @@ function Map.save(map, fileFunc)
     return string.pack(packer, n)
   end
 
-  local function packData(list, size, isBlocked)
+  local function packData(filenumber, list, size, isBlocked)
     isBlocked = isBlocked and packInt(1) or packInt(0)
+    -- Insert header things
+    insert(filenumber, baseFlags)
+    insert(filenumber, saveVersion)
+    insert(filenumber, packInt(0))
+    insert(filenumber, packInt(0))
+    insert(filenumber, packint(0))
+
+    -- for each run
     for i = 1, size do
       local run = list[i]
-      insert(1, packInt(run[1]), packInt(run[2]), packInt(run[3]), packInt(run[4]), isBlocked)
+
+      -- and for each value within the run
+      for j = 1, 4 do
+        insert(filenumber, run[j])
+      end
+
+      -- insert whether the run is blocked or naw
+      insert(filenumber, isBlocked)
     end
   end
 
+  -- we'll just dump everything into one file for now.
+  -- TODO: Make this dump to multiple files.
   if blocked < unblocked then
-    packData(blockedRuns, blocked)
+    packData(1, blockedRuns, blocked)
   else
-    packData(unblockedRuns, unblocked)
+    packData(1, unblockedRuns, unblocked)
+  end
+
+  local filesNeeded = 1 -- hardcoded for now.
+
+  for i = 1, filesNeeded do
+    -- get the next filename
+    local filename = fileFunc()
+
+    -- ensure we actually got one
+    if not filename then
+      error("Ran out of filenames while trying to save.", 2)
+    end
+
+    -- open the file
+    local h, err = io.open(filename, 'wb')
+
+    -- ensure it actually opened.
+    if not h then
+      error("Failed to open file " .. tostring(filename) .. " for writing: " .. err, 2)
+    end
+
+    -- write data yeet yeet.
+    local toWrite = writing[i]
+    for j = 1, toWrite.n do
+      h:write(toWrite[j])
+    end
+    h:close()
   end
 end
 
