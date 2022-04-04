@@ -19,6 +19,7 @@ local max = math.max
 
 -- "Globals"
 local VERSION = 1
+local DEBUG = true
 
 local FLAGS = {
   NONE          = 0,
@@ -30,6 +31,17 @@ local FLAGS = {
   SAVE_BLOCKED  = 32
 }
 
+local function debug(w, ...)
+  if DEBUG then
+    if type(w) == "number" then
+      print("[DEBUG]", ...)
+      os.sleep(w)
+    else
+      print("[DEBUG]", w, ...)
+    end
+  end
+end
+
 local Map = {}
 
 --- Create a new Map object.
@@ -37,7 +49,7 @@ local Map = {}
 function Map.create()
   -- @type Map
   return {
-    nodes = {}
+    nodes = {},
     --- Get a node.
     -- Get a node at position x, y, z. If the node does not exist, a new one will be created.
     -- @tparam self Map The map object to operate on.
@@ -98,16 +110,18 @@ function Map.load(filename)
 end
 
 local function packUByte(n)
+  if not n then error("bruh", 2) end
   return string.pack("<B", n)
 end
 local function unpackUByte(s)
+  if not n then error("bruh", 2) end
   return string.unpack("<B", s)
 end
 
 local function proxyUByteValue(v)
   return setmetatable(
-    {v, Set = function(self, v) self.v = v end, Get = function(self) return self.v end},
-    {__tostring = function(self) return packUByte(self.v) end}
+    {v, Set = function(self, v) self[1] = v end, Get = function(self) return self[1] end},
+    {__tostring = function(self) return packUByte(self[1]) end}
   )
 end
 
@@ -120,61 +134,118 @@ function Map.save(filename, map, multifileFunc)
   expect(1, filename, "string")
   expect(1, map, "table")
 
+  debug(1, "Begin map saving.")
+
   -- writing table ie: all bytes to be written.
   local writing = {}
 
   local function insert(i, v)
+    debug("Insertion:", i, v)
     writing[i].n = writing[i].n + 1
     writing[i][writing[i].n] = v
   end
 
   local saveVersion = packUByte(VERSION)
+  debug("VERSION:", saveVersion)
   local baseFlags = proxyUByteValue(0)
+  debug("Base flags:", tostring(baseFlags))
 
   -- Preprocess the map. We need to know the following information:
   --   1. The largest value (positive or negative), so we can determine if we need to increase size of written numbers.
   --   2. How much of each type of node run there will be, so we can determine if we are saving blocked or unblocked nodes.
   --   3. How much space we are going to take up with this single map, so we can determine if we need to split (and how many files to split into).
 
-  local minimum = 0
-  local maximum = 0
-  local totalBlockedNodeRuns = 0
-  local totalUnblockedNodeRuns = 0
+  local minimum = math.huge
+  local maximum = -math.huge
+  local blocked = 0
+  local blockedRuns = {}
+  local unblocked = 0
+  local unblockedRuns = {}
+  local minIndex = math.huge
+  local startZ = 0
   local last = false
-  local first = true
+  local minZ, maxZ = math.huge, -math.huge
+
+  -- calculate mins and maximums
   for x, Y in pairs(map.nodes) do
+    debug("Start new X")
     minimum = min(minimum, x)
     maximum = max(maximum, x)
     for y, Z in pairs(Y) do
+      debug("Start new Y")
       minimum = min(minimum, y)
       maximum = max(maximum, y)
+      minZ, maxZ = math.huge, -math.huge
       for z, node in pairs(Z) do
+        debug("Node:", x, y, z)
         minimum = min(minimum, z)
         maximum = max(maximum, z)
-        -- if node type changed...
-        if last ~= node.blocked then
-          -- and this is not the first check
-          if not first then
-            -- increment the corresponding node run type.
-            if last then
-              totalBlockedNodeRuns = totalBlockedNodeRuns + 1
-            else
-              totalUnblockedNodeRuns = totalUnblockedNodeRuns + 1
-            end
-          end
-
-          -- change the last node to the current node.
-          last = node.blocked
-        end
-
-        -- note that the first node has been checked.
-        first = false
+        minZ = min(minZ, z)
+        maxZ = max(maxZ, z)
       end
-    end
-  end
+
+      -- we should now have the minimum and maximum values along the Z axis stored in minZ, maxZ
+      -- lets use these to combine runs.
+
+      debug("Determined minimum and maximums:")
+      debug("Minimum:", minimum)
+      debug("Maximum:", maximum)
+      debug("MinZ   :", minZ)
+      debug("MaxZ   :", maxZ)
+      debug(0.25, "========")
+
+      -- in theory, the minimum value should always be a filled node.
+      local last = Z[minZ].blocked
+      startZ = minZ
+
+      debug(0.25, "Start isBlocked?:", last)
+      for z = minZ + 1, maxZ do
+        local node = Z[z]
+        if node then
+          if node.blocked ~= last then
+            if node.blocked then -- store a blocked run
+              blocked = blocked + 1
+              blockedRuns[blocked] = {startZ, z - 1}
+              debug(0.05, "Run end.", "blocked", startZ, z - 1)
+            else -- store an unblocked run
+              unblocked = unblocked + 1
+              unblockedRuns[unblocked] = {startZ, z - 1}
+              debug(0.05, "Run end.", "unblocked", startZ, z - 1)
+            end
+
+            last = node.blocked
+            startZ = z
+          end
+        else -- "empty" nodes are treated as blocked.
+          if not last then
+            unblocked = unblocked + 1
+            unblockedRuns[unblocked] = {startZ, z - 1}
+            debug(0.05, "Run end.", "unblocked", startZ, z - 1)
+
+            last = false
+            startZ = z
+          end -- end if
+        end -- end else
+      end -- end for z
+
+      -- we hit the end of the line, we should save a node run.
+      if Z[maxZ].blocked then -- store a blocked run
+        blocked = blocked + 1
+        blockedRuns[blocked] = {startZ, maxZ}
+        debug(0.05, "Run end.", "blocked", startZ, maxZ)
+      else -- store an unblocked run
+        unblocked = unblocked + 1
+        unblockedRuns[unblocked] = {startZ, maxZ}
+        debug(0.05, "Run end.", "unblocked", startZ, maxZ)
+      end
+    end -- end for y
+  end -- end for x
 
   -- determine the flags that we will be using.
-  if totalBlockedNodeRuns < totalUnblockedNodeRuns then
+  debug("Total blocked  :", blocked)
+  debug("Total unblocked:", unblocked)
+  debug(5, "================")
+  if blocked < unblocked then
     baseFlags:Set(baseFlags:Get() + FLAGS.SAVE_BLOCKED)
   end
   if minimum < -32768 then
@@ -186,6 +257,8 @@ function Map.save(filename, map, multifileFunc)
   elseif maximum > 127 then
     baseFlags:Set(baseFlags:Get() + FLAGS.LARGE_MAP)
   end
+
+  debug("New flags:", baseFlags, "(", baseFlags:Get(), ")")
 end
 
 return Map
