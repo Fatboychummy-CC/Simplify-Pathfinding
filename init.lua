@@ -28,7 +28,6 @@ local M = {}
 function M.create()
   -- create all of the objects we will need.
   local map = Map.create()
-  local path = Path.create()
   local trackingTurtle = TrackingTurtle.create()
 
   -- create the returned object
