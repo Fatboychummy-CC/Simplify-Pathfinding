@@ -111,11 +111,11 @@ end
 
 local function packUByte(n)
   if not n then error("bruh", 2) end
-  return string.pack("<B", n)
+  return string.pack("<I1", n)
 end
 local function unpackUByte(s)
   if not n then error("bruh", 2) end
-  return string.unpack("<B", s)
+  return string.unpack("<I1", s)
 end
 
 local function proxyUByteValue(v)
@@ -138,7 +138,7 @@ function Map.save(map, fileFunc)
   debug(1, "Begin map saving.")
 
   -- writing table ie: all bytes to be written.
-  local writing = {{}}
+  local writing = {{n = 0}}
 
   local function insert(i, v)
     debug("Insertion:", i, v)
@@ -169,16 +169,13 @@ function Map.save(map, fileFunc)
 
   -- calculate mins and maximums
   for x, Y in pairs(map.nodes) do
-    debug("Start new X")
     minimum = min(minimum, x)
     maximum = max(maximum, x)
     for y, Z in pairs(Y) do
-      debug("Start new Y")
       minimum = min(minimum, y)
       maximum = max(maximum, y)
       minZ, maxZ = math.huge, -math.huge
       for z, node in pairs(Z) do
-        debug("Node:", x, y, z)
         minimum = min(minimum, z)
         maximum = max(maximum, z)
         minZ = min(minZ, z)
@@ -188,18 +185,10 @@ function Map.save(map, fileFunc)
       -- we should now have the minimum and maximum values along the Z axis stored in minZ, maxZ
       -- lets use these to combine runs.
 
-      debug("Determined minimum and maximums:")
-      debug("Minimum:", minimum)
-      debug("Maximum:", maximum)
-      debug("MinZ   :", minZ)
-      debug("MaxZ   :", maxZ)
-      debug(0.25, "========")
-
       -- in theory, the minimum value should always be a filled node.
       local last = Z[minZ].blocked
       startZ = minZ
 
-      debug(0.25, "Start isBlocked?:", last)
       for z = minZ + 1, maxZ do
         local node = Z[z]
         if node then
@@ -207,11 +196,9 @@ function Map.save(map, fileFunc)
             if node.blocked then -- store a blocked run
               blocked = blocked + 1
               blockedRuns[blocked] = {x, y, startZ, z - 1}
-              debug(0.05, "Run end.", "blocked", startZ, z - 1)
             else -- store an unblocked run
               unblocked = unblocked + 1
               unblockedRuns[unblocked] = {x, y, startZ, z - 1}
-              debug(0.05, "Run end.", "unblocked", startZ, z - 1)
             end
 
             last = node.blocked
@@ -221,7 +208,6 @@ function Map.save(map, fileFunc)
           if not last then
             unblocked = unblocked + 1
             unblockedRuns[unblocked] = {x, y, startZ, z - 1}
-            debug(0.05, "Run end.", "unblocked", startZ, z - 1)
 
             last = false
             startZ = z
@@ -233,11 +219,9 @@ function Map.save(map, fileFunc)
       if Z[maxZ].blocked then -- store a blocked run
         blocked = blocked + 1
         blockedRuns[blocked] = {x, y, startZ, maxZ}
-        debug(0.05, "Run end.", "blocked", startZ, maxZ)
       else -- store an unblocked run
         unblocked = unblocked + 1
         unblockedRuns[unblocked] = {x, y, startZ, maxZ}
-        debug(0.05, "Run end.", "unblocked", startZ, maxZ)
       end
     end -- end for y
   end -- end for x
@@ -265,25 +249,27 @@ function Map.save(map, fileFunc)
   end
 
   if DEBUG then
-    baseFlagss:Set(baseFlags:Get() + FLAGS.DETAILED_DATA)
+    baseFlags:Set(baseFlags:Get() + FLAGS.DETAILED_DATA)
   end
 
   debug("New flags:", baseFlags, "(", baseFlags:Get(), ")")
 
   -- Write the information we are choosing to save to a file.
-  local packer = ("<I%d"):format(intSize)
+  local packer = ("<i%d"):format(intSize)
   local function packInt(n)
+    if n > 127 or n < -128 then error("bruh", 2) end
     return string.pack(packer, n)
   end
 
   local function packData(filenumber, list, size, isBlocked)
     isBlocked = isBlocked and packInt(1) or packInt(0)
     -- Insert header things
+    insert(filenumber, "FATMAP")
     insert(filenumber, baseFlags)
     insert(filenumber, saveVersion)
     insert(filenumber, packInt(0))
     insert(filenumber, packInt(0))
-    insert(filenumber, packint(0))
+    insert(filenumber, packInt(0))
 
     -- for each run
     for i = 1, size do
@@ -291,13 +277,15 @@ function Map.save(map, fileFunc)
 
       -- and for each value within the run
       for j = 1, 4 do
-        insert(filenumber, run[j])
+        insert(filenumber, packInt(run[j]))
       end
 
       -- insert whether the run is blocked or naw
       insert(filenumber, isBlocked)
     end
   end
+
+  _G.data = writing
 
   -- we'll just dump everything into one file for now.
   -- TODO: Make this dump to multiple files.
@@ -309,6 +297,7 @@ function Map.save(map, fileFunc)
 
   local filesNeeded = 1 -- hardcoded for now.
 
+  debug(0.25, "Begin writing data.")
   for i = 1, filesNeeded do
     -- get the next filename
     local filename = fileFunc()
@@ -329,7 +318,9 @@ function Map.save(map, fileFunc)
     -- write data yeet yeet.
     local toWrite = writing[i]
     for j = 1, toWrite.n do
-      h:write(toWrite[j])
+      local c = toWrite[j]
+      h:write(type(c) == "table" and tostring(c) or c)
+      debug(0.1, type(c) == "table" and tostring(c) or c)
     end
     h:close()
   end
